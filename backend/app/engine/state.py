@@ -24,6 +24,7 @@ WHY THIS MATTERS:
 """
 
 from typing import Dict, Optional
+from app.storage import db
 from app.utils.logger import get_logger
 
 logger = get_logger("state")
@@ -31,19 +32,40 @@ logger = get_logger("state")
 container_registry: Dict[str, str] = {}
 
 
-def store_container(step_id: str, container_id: str) -> None:
-    """Save a container ID for a step."""
+def store_container(step_id: str, container_id: str, env_id: str = None, name: str = None, image: str = None) -> None:
+    """Save a container ID for a step.
+
+    FIX #6: Includes persistence hook with error handling.
+    """
     container_registry[step_id] = container_id
-    logger.info("stored: step '%s' → container '%s'", step_id, container_id[:12])
+    logger.info("stored: step '%s' -> container '%s'", step_id, container_id[:12])
+
+    # Persistence hook (FIX #6: with error handling)
+    if env_id and name and image:
+        try:
+            db.save_container(container_id, env_id, name, image, "running")
+        except Exception as e:
+            logger.warning("Failed to persist container: %s", e)
+
+
+def store_environment(env_id: str, network_name: str) -> None:
+    """Persist environment record to SQLite.
+
+    FIX #6: Includes error handling.
+    """
+    try:
+        db.save_environment(env_id, network_name)
+    except Exception as e:
+        logger.warning("Failed to persist environment: %s", e)
 
 
 def get_container(step_id: str) -> Optional[str]:
     """Look up which container a step created."""
     cid = container_registry.get(step_id)
     if cid:
-        logger.debug("lookup: step '%s' → container '%s'", step_id, cid[:12])
+        logger.debug("lookup: step '%s' -> container '%s'", step_id, cid[:12])
     else:
-        logger.warning("lookup: step '%s' → NOT FOUND", step_id)
+        logger.warning("lookup: step '%s' -> NOT FOUND", step_id)
     return cid
 
 

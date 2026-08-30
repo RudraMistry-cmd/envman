@@ -21,8 +21,6 @@ WHAT:
        - Server sends: step_started, step_done, step_failed, done
 """
 
-import asyncio
-
 from fastapi import APIRouter
 from app.engine.coordinator import run_setup
 from app.models.environment import EnvironmentConfig
@@ -50,9 +48,10 @@ async def setup_env(config: EnvironmentConfig):
      We don't want the HTTP request to hang that long.
      Instead, we start the work and tell the frontend to watch WebSocket.
     """
-    logger.info("setup requested: node=%s, postgres=%s", config.node, config.postgres)
+    service_names = [s.name for s in config.services]
+    logger.info("setup requested: services=%s", service_names)
 
     # Run setup in the background (doesn't block the response)
-    asyncio.create_task(run_setup(config))
+    env_id = await run_setup(config)
 
-    return {"status": "started"}
+    return {"status": "started", "environment_id": env_id}

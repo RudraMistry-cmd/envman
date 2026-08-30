@@ -6,8 +6,9 @@ WHY: The planner made a plan. Now someone has to DO it.
      The executor RUNS Docker commands to pull images and start containers.
 
 WHAT: Executes one step at a time.
-     - pull_image:   downloads a Docker image
-     - start_container: creates and starts a container
+      - create_network: creates a Docker network
+      - pull_image: downloads a Docker image
+      - start_container: creates and starts a container
 
 HOW:
      1. Takes a Step object
@@ -93,6 +94,51 @@ async def run_command(cmd: List[str], timeout: int = 300) -> Dict[str, Any]:
     return result
 
 
+async def image_exists(image: str) -> bool:
+    """Check if a Docker image exists locally.
+
+    WHY: Before pulling, we check if the image is already cached.
+     Docker Hub has rate limits and pulls are slow.
+     If the image is already local, we skip the pull entirely.
+
+    HOW: Uses `docker images --format` to query the local image store.
+     Returns True if the exact image:tag is present.
+    """
+    result = await run_command(
+        ["docker", "images", "--format", "{{.Repository}}:{{.Tag}}", image],
+        timeout=10,
+    )
+    if result["code"] != 0:
+        return False
+    lines = [line.strip() for line in result["stdout"].splitlines() if line.strip()]
+    exists = image in lines
+    if exists:
+        logger.info("image %s found locally, pull can be skipped", image)
+    else:
+        logger.info("image %s not found locally, pull required", image)
+    return exists
+
+
+async def _create_network(network_name: str) -> Dict[str, Any]:
+    """Create a Docker network.
+
+    WHY: Containers on the same network can communicate via container names.
+         This is essential for multi-service environments (e.g., Node connecting to Postgres).
+
+    FIX: Ignore error if network already exists.
+    """
+    logger.info("creating network: %s", network_name)
+    result = await run_command(["docker", "network", "create", network_name])
+
+    # Ignore "already exists" error
+    if result["code"] != 0 and "already exists" not in result.get("stderr", ""):
+        logger.error("failed to create network: %s", result["stderr"])
+        return result
+
+    logger.info("network '%s' ready", network_name)
+    return {"stdout": network_name, "stderr": "", "code": 0}
+
+
 async def _pull_image(image: str) -> Dict[str, Any]:
     """Download a Docker image from Docker Hub.
 
@@ -102,7 +148,7 @@ async def _pull_image(image: str) -> Dict[str, Any]:
     return await run_command(["docker", "pull", image])
 
 
-async def _start_container(step: Step) -> Dict[str, Any]:
+async def _start_container(step: Step, network_name: str, env_id: str = None) -> Dict[str, Any]:
     """Start a Docker container.
 
     STEPS:
@@ -121,15 +167,28 @@ async def _start_container(step: Step) -> Dict[str, Any]:
     # Build command as a LIST (never as a string!)
     cmd: List[str] = ["docker", "run", "-d", "--name", name]
 
-    # Add environment variables if specified
-    env = step.params.get("env")
-    if env:
-        cmd.extend(["-e", env])
+    # FIX #5: Network attachment
+    cmd.extend(["--network", network_name])
 
-    # Add port mapping if specified
+    # Port mapping (if specified)
     port = step.params.get("port")
     if port:
         cmd.extend(["-p", port])
+
+    # Volume mounting (if specified)
+    volume = step.params.get("volume")
+    if volume:
+        cmd.extend(["-v", volume])
+
+    # Environment variables (convert dict to multiple -e flags)
+    env = step.params.get("env")
+    if env:
+        if isinstance(env, dict):
+            for key, value in env.items():
+                cmd.extend(["-e", f"{key}={value}"])
+        else:
+            # Legacy string format: "POSTGRES_PASSWORD=postgres"
+            cmd.extend(["-e", env])
 
     # Add the image name last
     cmd.append(image)
@@ -138,7 +197,7 @@ async def _start_container(step: Step) -> Dict[str, Any]:
 
     if result["code"] == 0:
         container_id = result["stdout"]
-        store_container(step.id, container_id)
+        store_container(step.id, container_id, env_id=env_id, name=name, image=image)
         logger.info("container '%s' started successfully", name)
     else:
         logger.error("failed to start container '%s': %s", name, result["stderr"])
@@ -146,7 +205,7 @@ async def _start_container(step: Step) -> Dict[str, Any]:
     return result
 
 
-async def execute_step(step: Step) -> Dict[str, Any]:
+async def execute_step(step: Step, network_name: str = "envman_net", env_id: str = None) -> Dict[str, Any]:
     """Execute a single step.
 
     This is the main entry point the coordinator calls.
@@ -154,10 +213,13 @@ async def execute_step(step: Step) -> Dict[str, Any]:
     """
     logger.info("=== executing step: %s (%s) ===", step.id, step.type)
 
+    if step.type == "create_network":
+        return await _create_network(step.params.get("network_name", network_name))
+
     if step.type == "pull_image":
         return await _pull_image(step.params["image"])
 
     if step.type == "start_container":
-        return await _start_container(step)
+        return await _start_container(step, network_name, env_id)
 
     return {"stdout": "", "stderr": f"Unknown step type: {step.type}", "code": 1}

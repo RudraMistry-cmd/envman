@@ -21,3 +21,4 @@ class Plan(BaseModel):
     """The full list of steps to set up the environment."""
 
     steps: List[Step]
+    network_name: str = "envman_net"  # Network for this environment

@@ -30,33 +30,44 @@ THINK OF IT LIKE:
      - Reports progress to the client (frontend)
 """
 
+import uuid
 from datetime import datetime, timezone
 from app.engine.planner import plan_environment
 from app.engine.executor import execute_step
 from app.engine.verifier import verify_environment
 from app.models.environment import EnvironmentConfig
+from app.engine.state import store_environment
 from app.events.bus import emit
 from app.utils.logger import get_logger
 
 logger = get_logger("coordinator")
 
 
-async def run_setup(config: EnvironmentConfig) -> None:
+async def run_setup(config: EnvironmentConfig) -> str:
     """Run the full setup pipeline.
 
     This is called when the user clicks "Start Setup."
     It runs the ENTIRE flow from plan to verification.
+
+    Returns: environment_id (UUID)
     """
     logger.info("========== SETUP STARTED ==========")
     start_time = datetime.now(timezone.utc)
 
+    # Generate environment ID
+    env_id = str(uuid.uuid4())
+
     try:
         # PHASE 1: Plan
         logger.info("--- PHASE 1: Planning ---")
-        plan = plan_environment(config)
+        plan = await plan_environment(config)
         total_steps = len(plan.steps)
 
+        # Persist environment record
+        store_environment(env_id, plan.network_name)
+
         await emit("setup_started", {
+            "environment_id": env_id,
             "total_steps": total_steps,
             "timestamp": start_time.isoformat(),
         })
@@ -75,9 +86,9 @@ async def run_setup(config: EnvironmentConfig) -> None:
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             })
 
-            # Actually run the step
+            # Actually run the step (pass network_name and env_id to executor)
             try:
-                result = await execute_step(step)
+                result = await execute_step(step, plan.network_name, env_id)
             except Exception as e:
                 logger.error("step '%s' raised exception: %s", step.id, str(e))
                 await emit("step_failed", {
@@ -88,7 +99,7 @@ async def run_setup(config: EnvironmentConfig) -> None:
                     "message": f"Step {step.id} failed: {str(e)}",
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                 })
-                return
+                return env_id
 
             # Check result
             if result["code"] != 0:
@@ -101,7 +112,7 @@ async def run_setup(config: EnvironmentConfig) -> None:
                     "message": f"Step {step.id} failed: {result['stderr'][:200]}",
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                 })
-                return
+                return env_id
 
             # Step succeeded
             logger.info("step '%s' completed", step.id)
@@ -130,6 +141,7 @@ async def run_setup(config: EnvironmentConfig) -> None:
 
         # PHASE 4: Report
         await emit("done", {
+            "environment_id": env_id,
             "verification": verification,
             "success": all_ready,
             "duration_ms": duration_ms,
@@ -146,3 +158,5 @@ async def run_setup(config: EnvironmentConfig) -> None:
             "message": f"Setup failed: {str(e)}",
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
+
+    return env_id

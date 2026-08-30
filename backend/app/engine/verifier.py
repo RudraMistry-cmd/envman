@@ -12,6 +12,7 @@ WHY: This is the MOST IMPORTANT part of EnvMan.
 WHAT: Checks that each service is ACTUALLY ready to use.
      - Postgres: can we connect and run a query?
      - Node:     is the right version installed?
+     - Redis:    can we ping it?
 
 HOW:
      1. Check if container exists
@@ -118,116 +119,133 @@ async def _node_version(name: str) -> Dict[str, Any]:
     }
 
 
-async def verify_environment() -> List[Dict[str, Any]]:
-    """Run ALL verification checks and return a complete report.
+async def _redis_ping(name: str) -> Dict[str, Any]:
+    """Check if Redis responds to PING.
 
-    This is what we send to the frontend.
-    Every service gets a clear status: ready, failed, not_found, etc.
+    WHY: Redis might be running but not accepting connections.
+     PING → PONG confirms the service is alive.
     """
-    logger.info("=== starting verification ===")
-    dump_registry()
+    result = await run_command([
+        "docker", "exec", name, "redis-cli", "ping"
+    ])
+    return {
+        "success": result["code"] == 0 and "PONG" in result["stdout"],
+        "output": result["stdout"],
+        "error": result["stderr"] if result["code"] != 0 else None,
+    }
 
-    results: List[Dict[str, Any]] = []
 
-    # --- Verify Postgres ---
-    pg_name = "envman_pg"
-    pg_container = get_container("start_pg")
+async def _verify_service(name: str, image: str) -> Dict[str, Any]:
+    """Verify a single service based on its image type.
 
-    if not pg_container:
-        logger.error("postgres container not tracked")
-        results.append({
-            "service": "postgres",
-            "status": "not_tracked",
-            "checks": [],
-        })
-    elif not await _container_exists(pg_name):
-        logger.error("postgres container '%s' does not exist", pg_name)
-        results.append({
-            "service": "postgres",
+    Dynamically determines which checks to run based on the image.
+    """
+    container_name = f"envman_{name}"
+
+    # Check if container exists
+    if not await _container_exists(container_name):
+        logger.error("container '%s' does not exist", container_name)
+        return {
+            "service": name,
             "status": "not_found",
             "checks": [],
-        })
-    elif not await _container_running(pg_name):
-        logger.error("postgres container '%s' is not running", pg_name)
-        results.append({
-            "service": "postgres",
+        }
+
+    # Check if container is running
+    if not await _container_running(container_name):
+        logger.error("container '%s' is not running", container_name)
+        return {
+            "service": name,
             "status": "not_running",
             "checks": [],
-        })
-    else:
-        checks = []
+        }
 
-        # Check 1: pg_isready
-        ready = await _pg_is_ready(pg_name)
+    checks = []
+
+    # Determine service type from image and run appropriate checks
+    if "postgres" in image:
+        ready = await _pg_is_ready(container_name)
         checks.append({
             "name": "pg_isready",
             "passed": ready,
             "detail": "accepting connections" if ready else "not accepting connections",
         })
 
-        # Check 2: run a real query
         if ready:
-            query_result = await _pg_run_query(pg_name)
+            query_result = await _pg_run_query(container_name)
             checks.append({
                 "name": "query_execution",
                 "passed": query_result["success"],
                 "detail": query_result["output"] if query_result["success"] else query_result["error"],
             })
 
-        status = "ready" if all(c["passed"] for c in checks) else "failed"
-        logger.info("postgres verification: %s", status)
-
-        results.append({
-            "service": "postgres",
-            "status": status,
-            "checks": checks,
-        })
-
-    # --- Verify Node ---
-    node_name = "envman_node"
-    node_container = get_container("start_node")
-
-    if not node_container:
-        logger.error("node container not tracked")
-        results.append({
-            "service": "node",
-            "status": "not_tracked",
-            "checks": [],
-        })
-    elif not await _container_exists(node_name):
-        logger.error("node container '%s' does not exist", node_name)
-        results.append({
-            "service": "node",
-            "status": "not_found",
-            "checks": [],
-        })
-    elif not await _container_running(node_name):
-        logger.error("node container '%s' is not running", node_name)
-        results.append({
-            "service": "node",
-            "status": "not_running",
-            "checks": [],
-        })
-    else:
-        checks = []
-
-        # Check 1: node -v
-        version_info = await _node_version(node_name)
+    elif "node" in image:
+        version_info = await _node_version(container_name)
         checks.append({
             "name": "node_version",
             "passed": version_info["success"],
             "detail": version_info["version"] or "could not get version",
         })
 
-        status = "ready" if all(c["passed"] for c in checks) else "failed"
-        logger.info("node verification: %s (version: %s)", status, version_info["version"])
-
-        results.append({
-            "service": "node",
-            "status": status,
-            "version": version_info["version"],
-            "checks": checks,
+    elif "redis" in image:
+        ping_result = await _redis_ping(container_name)
+        checks.append({
+            "name": "redis_ping",
+            "passed": ping_result["success"],
+            "detail": ping_result["output"] if ping_result["success"] else ping_result["error"],
         })
+
+    else:
+        # Unknown service — just check if running
+        checks.append({
+            "name": "container_running",
+            "passed": True,
+            "detail": "container is running (no specific checks for this service type)",
+        })
+
+    status = "ready" if all(c["passed"] for c in checks) else "failed"
+    logger.info("verification for '%s': %s", name, status)
+
+    return {
+        "service": name,
+        "status": status,
+        "checks": checks,
+    }
+
+
+async def verify_environment() -> List[Dict[str, Any]]:
+    """Run ALL verification checks and return a complete report.
+
+    This is what we send to the frontend.
+    Every service gets a clear status: ready, failed, not_found, etc.
+
+    NOW DYNAMIC: Iterates over all containers in the registry
+    instead of hardcoding specific services.
+    """
+    logger.info("=== starting verification ===")
+    registry = dump_registry()
+
+    results: List[Dict[str, Any]] = []
+
+    # Map step IDs to service info
+    # Step IDs are like "start_node", "start_postgres", etc.
+    for step_id, container_id in registry.items():
+        # Extract service name from step ID (remove "start_" prefix)
+        if not step_id.startswith("start_"):
+            continue
+
+        service_name = step_id[6:]  # Remove "start_" prefix
+        container_name = f"envman_{service_name}"
+
+        # Get image from container inspect
+        result = await run_command([
+            "docker", "inspect", "--format", "{{.Config.Image}}", container_name
+        ])
+        image = result["stdout"].strip() if result["code"] == 0 else "unknown"
+
+        # Verify this service
+        verification = await _verify_service(service_name, image)
+        results.append(verification)
 
     logger.info("=== verification complete ===")
     return results
