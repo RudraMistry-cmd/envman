@@ -25,14 +25,42 @@ THINK OF IT LIKE:
      You MUST lay the foundation before building.
 """
 
-from typing import List
+from typing import List, Optional, Dict
 from app.models.plan import Plan
 from app.models.step import Step
-from app.models.environment import EnvironmentConfig
+from app.models.environment import EnvironmentConfig, ServiceSpec
 from app.engine.executor import image_exists
+from app.registry.services import get_service_by_image, get_all_services
 from app.utils.logger import get_logger
 
 logger = get_logger("planner")
+
+
+def _lookup_registry_service(service: ServiceSpec) -> Optional[Dict]:
+    """Look up a service in the registry by image prefix.
+
+    WHY: Registry defines default_env (API keys, root passwords, etc.)
+         that must be merged into the container's environment.
+
+    Returns: ServiceDefinition dict or None if not found.
+    """
+    return get_service_by_image(service.image)
+
+
+def _merge_env(registry_env: Dict[str, str], user_env: Optional[Dict[str, str]]) -> Dict[str, str]:
+    """Merge registry defaults with user-supplied env vars.
+
+    WHY: Registry provides required defaults (e.g. TYPESENSE_API_KEY).
+         User values override on conflict.
+
+    Priority: user_env > registry_env
+    """
+    merged = {}
+    if registry_env:
+        merged.update(registry_env)
+    if user_env:
+        merged.update(user_env)
+    return merged
 
 
 async def plan_environment(config: EnvironmentConfig) -> Plan:
@@ -82,8 +110,15 @@ async def plan_environment(config: EnvironmentConfig) -> Plan:
             params["port"] = f"{service.port}:{service.port}"
         if service.volume:
             params["volume"] = service.volume
-        if service.env:
-            params["env"] = service.env
+
+        # Merge registry default_env with user-supplied env
+        # WHY: Registry provides required defaults (API keys, root passwords).
+        #      User values override on conflict.
+        registry_svc = _lookup_registry_service(service)
+        registry_env = registry_svc.default_env if registry_svc else {}
+        merged_env = _merge_env(registry_env, service.env)
+        if merged_env:
+            params["env"] = merged_env
 
         steps.append(Step(
             id=f"start_{service.name}",
