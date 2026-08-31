@@ -33,7 +33,7 @@ SERVICES = [
         image="python",
         default_port=None,
         default_env={},
-        health_check_type="node_version"
+        health_check_type="python_version"
     ),
 
     # ===== DATABASES =====
@@ -148,7 +148,7 @@ SERVICES = [
         category="search",
         image="typesense/typesense",
         default_port=8108,
-        default_env={},
+        default_env={"TYPESENSE_API_KEY": "xyz"},
         health_check_type="http_get_with_api_key"
     ),
 
@@ -167,7 +167,7 @@ SERVICES = [
 
 def get_service_by_image(image: str):
     for svc in SERVICES:
-        if svc.image in image:
+        if image.startswith(svc.image):
             return svc
     return None
 

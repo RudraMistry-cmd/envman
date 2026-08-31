@@ -49,6 +49,7 @@ HEALTH_CHECK_DISPATCH = {
     "pg_isready": "_pg_is_ready",
     "redis_ping": "_redis_ping",
     "node_version": "_node_version",
+    "python_version": "_python_version",
     "tcp_port": "_tcp_port_check",
     # Phase 2 additions:
     "mongo_ping": "_mongo_ping",
@@ -135,6 +136,22 @@ async def _node_version(name: str) -> Dict[str, Any]:
     }
 
 
+async def _python_version(name: str) -> Dict[str, Any]:
+    """Check Python version inside the container.
+
+    WHY: The user asked for Python. Did they GET Python?
+     We run "python --version" INSIDE the container to verify.
+     Tries python3 first, falls back to python if not found.
+    """
+    result = await run_command(["docker", "exec", name, "python3", "--version"])
+    if result["code"] != 0:
+        result = await run_command(["docker", "exec", name, "python", "--version"])
+    return {
+        "version": result["stdout"].strip() if result["code"] == 0 else None,
+        "success": result["code"] == 0,
+    }
+
+
 async def _redis_ping(name: str) -> Dict[str, Any]:
     """Check if Redis responds to PING.
 
@@ -151,7 +168,7 @@ async def _redis_ping(name: str) -> Dict[str, Any]:
     }
 
 
-def _tcp_port_check(container_name: str, port: int) -> bool:
+def _tcp_port_check_sync(container_name: str, port: int) -> bool:
     """
     WHY:
     Some services only need a basic port-level readiness check.
@@ -171,6 +188,11 @@ def _tcp_port_check(container_name: str, port: int) -> bool:
     ]
     result = subprocess.run(cmd, capture_output=True)
     return result.returncode == 0
+
+
+async def _tcp_port_check(container_name: str, port: int) -> bool:
+    """Async wrapper for TCP port check — runs blocking subprocess in thread."""
+    return await asyncio.to_thread(_tcp_port_check_sync, container_name, port)
 
 
 # ===== Phase 2 Health Check Functions =====
@@ -271,6 +293,30 @@ def _get_health_check_url(image: str) -> str:
     return ""
 
 
+async def _discover_envman_containers() -> List[Dict[str, str]]:
+    """Discover envman containers via Docker when in-memory registry is empty.
+
+    WHY: After server restart, container_registry is empty but containers
+         are still running. This fallback queries Docker directly.
+    """
+    result = await run_command([
+        "docker", "ps", "--filter", "name=envman_", "--format", "{{.Names}}|{{.Image}}"
+    ])
+    containers = []
+    if result["code"] == 0 and result["stdout"]:
+        for line in result["stdout"].strip().splitlines():
+            if "|" in line:
+                name, image = line.split("|", 1)
+                # Extract service name from container name (envman_xxx -> xxx)
+                service_name = name.replace("envman_", "")
+                containers.append({
+                    "step_id": f"start_{service_name}",
+                    "container_name": name,
+                    "image": image,
+                })
+    return containers
+
+
 async def _verify_service(name: str, image: str, port: int = None) -> Dict[str, Any]:
     """Verify a single service based on registry dispatch.
 
@@ -360,6 +406,14 @@ async def _verify_service(name: str, image: str, port: int = None) -> Dict[str, 
             "detail": version_info["version"] or "could not get version",
         })
 
+    elif check_type == "python_version":
+        version_info = await _python_version(container_name)
+        checks.append({
+            "name": "python_version",
+            "passed": version_info["success"],
+            "detail": version_info["version"] or "could not get version",
+        })
+
     elif check_type == "tcp_port":
         if not port:
             checks.append({
@@ -368,7 +422,7 @@ async def _verify_service(name: str, image: str, port: int = None) -> Dict[str, 
                 "detail": "no port defined for service",
             })
         else:
-            port_reachable = _tcp_port_check(container_name, port)
+            port_reachable = await _tcp_port_check(container_name, port)
             checks.append({
                 "name": "tcp_port",
                 "passed": port_reachable,
@@ -457,23 +511,38 @@ async def verify_environment() -> List[Dict[str, Any]]:
     This is what we send to the frontend.
     Every service gets a clear status: ready, failed, not_found, etc.
 
-    NOW DYNAMIC: Iterates over all containers in the registry
+    DYNAMIC: Iterates over all containers in the registry
     instead of hardcoding specific services.
+
+    FALLBACK: If in-memory registry is empty (e.g. after server restart),
+    discovers envman containers directly via Docker.
     """
     logger.info("=== starting verification ===")
     registry = dump_registry()
 
+    # Build work items from registry
+    work_items = []
+
+    if registry:
+        # Use in-memory registry
+        for step_id, container_id in registry.items():
+            if not step_id.startswith("start_"):
+                continue
+            service_name = step_id[6:]
+            container_name = f"envman_{service_name}"
+            work_items.append({"step_id": step_id, "container_name": container_name})
+    else:
+        # Fallback: discover containers via Docker
+        logger.info("in-memory registry empty, discovering containers via Docker")
+        discovered = await _discover_envman_containers()
+        work_items = discovered
+
     results: List[Dict[str, Any]] = []
 
-    # Map step IDs to service info
-    # Step IDs are like "start_node", "start_postgres", etc.
-    for step_id, container_id in registry.items():
-        # Extract service name from step ID (remove "start_" prefix)
-        if not step_id.startswith("start_"):
-            continue
-
-        service_name = step_id[6:]  # Remove "start_" prefix
-        container_name = f"envman_{service_name}"
+    for item in work_items:
+        container_name = item["container_name"]
+        # Extract service name from container name
+        service_name = container_name.replace("envman_", "")
 
         # Get image from container inspect
         result = await run_command([
@@ -489,7 +558,6 @@ async def verify_environment() -> List[Dict[str, Any]]:
         if port_result["code"] == 0:
             ports = port_result["stdout"].strip().split()
             if ports:
-                # Extract port number from "80/tcp" format
                 port_str = ports[0].split("/")[0]
                 try:
                     port = int(port_str)
