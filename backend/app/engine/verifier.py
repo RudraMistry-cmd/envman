@@ -35,12 +35,22 @@ THINK OF IT LIKE:
 """
 
 import asyncio
+import subprocess
 from typing import Dict, Any, List
 from app.engine.executor import run_command
 from app.engine.state import get_container, dump_registry
+from app.registry.services import get_service_by_image
 from app.utils.logger import get_logger
 
 logger = get_logger("verifier")
+
+# Dispatch map for health check methods
+HEALTH_CHECK_DISPATCH = {
+    "pg_isready": "_pg_is_ready",
+    "redis_ping": "_redis_ping",
+    "node_version": "_node_version",
+    "tcp_port": "_tcp_port_check",
+}
 
 # How many times to retry checking Postgres
 PG_RETRY_COUNT = 5
@@ -135,10 +145,45 @@ async def _redis_ping(name: str) -> Dict[str, Any]:
     }
 
 
-async def _verify_service(name: str, image: str) -> Dict[str, Any]:
-    """Verify a single service based on its image type.
+def _tcp_port_check(container_name: str, port: int) -> bool:
+    """
+    WHY:
+    Some services only need a basic port-level readiness check.
 
-    Dynamically determines which checks to run based on the image.
+    WHAT:
+    Verifies that a TCP port is open inside the container.
+
+    HOW:
+    Uses bash + /dev/tcp to probe port from within container.
+
+    THINK OF IT LIKE:
+    A minimal liveness probe — not full correctness, but connectivity.
+    """
+    cmd = [
+        "docker", "exec", container_name,
+        "bash", "-c", f"</dev/tcp/localhost/{port}"
+    ]
+    result = subprocess.run(cmd, capture_output=True)
+    return result.returncode == 0
+
+
+async def _verify_service(name: str, image: str, port: int = None) -> Dict[str, Any]:
+    """Verify a single service based on registry dispatch.
+
+    WHY:
+    We want verification logic driven by the service registry,
+    not fragile substring matching on image strings.
+
+    WHAT:
+    Looks up service definition from registry and dispatches
+    to the appropriate health check method.
+
+    HOW:
+    Uses get_service_by_image to find the service definition,
+    then dispatches based on health_check_type.
+
+    THINK OF IT LIKE:
+    A router that maps service type → verification behavior.
     """
     container_name = f"envman_{name}"
 
@@ -160,10 +205,26 @@ async def _verify_service(name: str, image: str) -> Dict[str, Any]:
             "checks": [],
         }
 
-    checks = []
+    # Look up service in registry
+    service = get_service_by_image(image)
 
-    # Determine service type from image and run appropriate checks
-    if "postgres" in image:
+    if not service:
+        logger.warning("no registry match for image '%s'", image)
+        return {
+            "service": name,
+            "status": "unknown",
+            "checks": [{
+                "name": "registry_lookup",
+                "passed": False,
+                "detail": "no registry match for image",
+            }],
+        }
+
+    checks = []
+    check_type = service.health_check_type
+
+    # Dispatch to appropriate health check
+    if check_type == "pg_isready":
         ready = await _pg_is_ready(container_name)
         checks.append({
             "name": "pg_isready",
@@ -179,15 +240,7 @@ async def _verify_service(name: str, image: str) -> Dict[str, Any]:
                 "detail": query_result["output"] if query_result["success"] else query_result["error"],
             })
 
-    elif "node" in image:
-        version_info = await _node_version(container_name)
-        checks.append({
-            "name": "node_version",
-            "passed": version_info["success"],
-            "detail": version_info["version"] or "could not get version",
-        })
-
-    elif "redis" in image:
+    elif check_type == "redis_ping":
         ping_result = await _redis_ping(container_name)
         checks.append({
             "name": "redis_ping",
@@ -195,16 +248,39 @@ async def _verify_service(name: str, image: str) -> Dict[str, Any]:
             "detail": ping_result["output"] if ping_result["success"] else ping_result["error"],
         })
 
-    else:
-        # Unknown service — just check if running
+    elif check_type == "node_version":
+        version_info = await _node_version(container_name)
         checks.append({
-            "name": "container_running",
-            "passed": True,
-            "detail": "container is running (no specific checks for this service type)",
+            "name": "node_version",
+            "passed": version_info["success"],
+            "detail": version_info["version"] or "could not get version",
+        })
+
+    elif check_type == "tcp_port":
+        if not port:
+            checks.append({
+                "name": "tcp_port",
+                "passed": False,
+                "detail": "no port defined for service",
+            })
+        else:
+            port_reachable = _tcp_port_check(container_name, port)
+            checks.append({
+                "name": "tcp_port",
+                "passed": port_reachable,
+                "detail": f"port {port} reachable" if port_reachable else f"port {port} not reachable",
+            })
+
+    else:
+        # Unsupported check type
+        checks.append({
+            "name": "unsupported_check",
+            "passed": False,
+            "detail": f"unsupported health check type: {check_type}",
         })
 
     status = "ready" if all(c["passed"] for c in checks) else "failed"
-    logger.info("verification for '%s': %s", name, status)
+    logger.info("verification for '%s': %s (type=%s)", name, status, check_type)
 
     return {
         "service": name,
@@ -243,8 +319,23 @@ async def verify_environment() -> List[Dict[str, Any]]:
         ])
         image = result["stdout"].strip() if result["code"] == 0 else "unknown"
 
+        # Get port from container inspect (first exposed port)
+        port = None
+        port_result = await run_command([
+            "docker", "inspect", "--format", "{{range $p, $conf := .NetworkSettings.Ports}}{{$p}} {{end}}", container_name
+        ])
+        if port_result["code"] == 0:
+            ports = port_result["stdout"].strip().split()
+            if ports:
+                # Extract port number from "80/tcp" format
+                port_str = ports[0].split("/")[0]
+                try:
+                    port = int(port_str)
+                except ValueError:
+                    pass
+
         # Verify this service
-        verification = await _verify_service(service_name, image)
+        verification = await _verify_service(service_name, image, port)
         results.append(verification)
 
     logger.info("=== verification complete ===")

@@ -45,3 +45,12 @@ ehthumbs.db
 # Logs
 *.log
 logs/
+
+# Phase 1 implementation prompt (local reference)
+PHASE1_IMPLEMENTATION_PROMPT.md
+
+# OpenCode local config
+.opencode/
+
+# SQLite databases
+*.db

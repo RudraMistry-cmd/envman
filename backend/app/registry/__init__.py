@@ -1,0 +1,1 @@
+# Registry module for service definitions

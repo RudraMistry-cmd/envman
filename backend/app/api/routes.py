@@ -24,6 +24,7 @@ WHAT:
 from fastapi import APIRouter
 from app.engine.coordinator import run_setup
 from app.models.environment import EnvironmentConfig
+from app.registry.services import get_all_services
 from app.utils.logger import get_logger
 
 logger = get_logger("routes")
@@ -35,6 +36,24 @@ router = APIRouter()
 async def health_check():
     """Health check endpoint. Load balancers use this."""
     return {"status": "ok"}
+
+
+@router.get("/registry/services")
+def list_services():
+    """
+    WHY:
+    Frontend needs to know which services are available.
+
+    WHAT:
+    Returns the full service registry.
+
+    HOW:
+    Directly serializes ServiceDefinition objects.
+
+    THINK OF IT LIKE:
+    An API endpoint exposing EnvMan's supported ecosystem.
+    """
+    return get_all_services()
 
 
 @router.post("/setup")
