@@ -50,6 +50,12 @@ HEALTH_CHECK_DISPATCH = {
     "redis_ping": "_redis_ping",
     "node_version": "_node_version",
     "tcp_port": "_tcp_port_check",
+    # Phase 2 additions:
+    "mongo_ping": "_mongo_ping",
+    "http_get": "_http_get_check",
+    "http_get_with_api_key": "_http_get_with_api_key_check",
+    "kafka_api_version": "_kafka_api_version",
+    "sqlite_version": "_sqlite_version",
 }
 
 # How many times to retry checking Postgres
@@ -167,6 +173,104 @@ def _tcp_port_check(container_name: str, port: int) -> bool:
     return result.returncode == 0
 
 
+# ===== Phase 2 Health Check Functions =====
+
+async def _mongo_ping(name: str) -> Dict[str, Any]:
+    """Check MongoDB responds to ping via mongosh.
+
+    WHY: Real protocol-level check, not just TCP port.
+    """
+    result = await run_command([
+        "docker", "exec", name,
+        "mongosh", "--eval", "db.adminCommand({ping:1})", "--quiet"
+    ])
+    return {
+        "success": result["code"] == 0,
+        "output": result["stdout"],
+        "error": result["stderr"] if result["code"] != 0 else None,
+    }
+
+
+async def _http_get_check(container_name: str, url: str, timeout: int = 5) -> Dict[str, Any]:
+    """HTTP GET health check — runs curl inside container.
+
+    Used by: couchdb, elasticsearch, meilisearch, minio, nats
+    """
+    result = await run_command([
+        "docker", "exec", container_name,
+        "curl", "-sf", "--max-time", str(timeout), url
+    ])
+    return {
+        "success": result["code"] == 0,
+        "output": result["stdout"] if result["code"] == 0 else result["stderr"],
+    }
+
+
+async def _http_get_with_api_key_check(container_name: str, url: str, api_key: str) -> Dict[str, Any]:
+    """HTTP GET with API key header — for typesense.
+
+    WHY: Typesense requires API key for all endpoints including health.
+    """
+    result = await run_command([
+        "docker", "exec", container_name,
+        "curl", "-sf", "-H", f"X-TYPESENSE-API-KEY: {api_key}", url
+    ])
+    return {
+        "success": result["code"] == 0,
+        "output": result["stdout"] if result["code"] == 0 else result["stderr"],
+    }
+
+
+async def _kafka_api_version(container_name: str) -> Dict[str, Any]:
+    """Check Kafka broker is ready via API version probe.
+
+    WHY: Official Kafka readiness check — proves broker accepts connections.
+    NOTE: Kafka takes 15-30s to start. Retry logic is in verify_environment.
+    """
+    result = await run_command([
+        "docker", "exec", container_name,
+        "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"
+    ])
+    return {
+        "success": result["code"] == 0,
+        "output": result["stdout"][:200] if result["code"] == 0 else result["stderr"],
+    }
+
+
+async def _sqlite_version(container_name: str) -> Dict[str, Any]:
+    """Check SQLite CLI is available in the container.
+
+    WHY: SQLite is embedded — no daemon to check. Just confirm binary exists.
+    """
+    result = await run_command([
+        "docker", "exec", container_name, "sqlite3", "--version"
+    ])
+    return {
+        "success": result["code"] == 0,
+        "version": result["stdout"].strip() if result["code"] == 0 else None,
+    }
+
+
+# ===== Health check URL configuration =====
+# Maps service image patterns to their health check URLs
+HEALTH_CHECK_URLS = {
+    "couchdb": "http://localhost:5984/_up",
+    "elasticsearch": "http://localhost:9200/_cluster/health",
+    "meilisearch": "http://localhost:7700/health",
+    "minio": "http://localhost:9000/minio/health/live",
+    "nats": "http://localhost:8222/healthz",
+    "typesense": "http://localhost:8108/health",
+}
+
+
+def _get_health_check_url(image: str) -> str:
+    """Get the health check URL for a service based on its image."""
+    for pattern, url in HEALTH_CHECK_URLS.items():
+        if pattern in image:
+            return url
+    return ""
+
+
 async def _verify_service(name: str, image: str, port: int = None) -> Dict[str, Any]:
     """Verify a single service based on registry dispatch.
 
@@ -270,6 +374,64 @@ async def _verify_service(name: str, image: str, port: int = None) -> Dict[str, 
                 "passed": port_reachable,
                 "detail": f"port {port} reachable" if port_reachable else f"port {port} not reachable",
             })
+
+    elif check_type == "mongo_ping":
+        ping_result = await _mongo_ping(container_name)
+        checks.append({
+            "name": "mongo_ping",
+            "passed": ping_result["success"],
+            "detail": ping_result["output"] if ping_result["success"] else ping_result["error"],
+        })
+
+    elif check_type == "http_get":
+        url = _get_health_check_url(image)
+        if not url:
+            checks.append({
+                "name": "http_get",
+                "passed": False,
+                "detail": "no health check URL configured for this service",
+            })
+        else:
+            http_result = await _http_get_check(container_name, url)
+            checks.append({
+                "name": "http_get",
+                "passed": http_result["success"],
+                "detail": http_result["output"] if http_result["success"] else http_result["error"],
+            })
+
+    elif check_type == "http_get_with_api_key":
+        url = _get_health_check_url(image)
+        # Typesense API key from default_env
+        api_key = service.default_env.get("TYPESENSE_API_KEY", "xyz")
+        if not url:
+            checks.append({
+                "name": "http_get_with_api_key",
+                "passed": False,
+                "detail": "no health check URL configured for this service",
+            })
+        else:
+            http_result = await _http_get_with_api_key_check(container_name, url, api_key)
+            checks.append({
+                "name": "http_get_with_api_key",
+                "passed": http_result["success"],
+                "detail": http_result["output"] if http_result["success"] else http_result["error"],
+            })
+
+    elif check_type == "kafka_api_version":
+        kafka_result = await _kafka_api_version(container_name)
+        checks.append({
+            "name": "kafka_api_version",
+            "passed": kafka_result["success"],
+            "detail": kafka_result["output"] if kafka_result["success"] else kafka_result["error"],
+        })
+
+    elif check_type == "sqlite_version":
+        sqlite_result = await _sqlite_version(container_name)
+        checks.append({
+            "name": "sqlite_version",
+            "passed": sqlite_result["success"],
+            "detail": sqlite_result.get("version", "sqlite3 not found"),
+        })
 
     else:
         # Unsupported check type
