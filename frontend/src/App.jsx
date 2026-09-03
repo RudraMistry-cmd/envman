@@ -89,7 +89,7 @@ export default function App() {
 
   const { connect, close } = useWebSocket(WS_URL, handleWsMessage)
 
-  const startSetup = async () => {
+  const startSetup = async (payload) => {
     setError(null)
     setVerification(null)
     setDuration(null)
@@ -102,7 +102,7 @@ export default function App() {
       const res = await fetch(`${API}/setup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config),
+        body: JSON.stringify(payload),
       })
 
       if (!res.ok) {

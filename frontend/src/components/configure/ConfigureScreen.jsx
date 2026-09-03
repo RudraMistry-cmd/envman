@@ -99,6 +99,20 @@ export default function ConfigureScreen({ config, setConfig, onStart, onBack }) 
     })
   }
 
+  const handleStart = () => {
+    // Build proper {services: [...]} payload from registry
+    const serviceSpecs = Object.entries(config)
+      .filter(([, version]) => version)
+      .map(([serviceId, version]) => {
+        const registryEntry = services.find(s => s.id === serviceId)
+        return {
+          name: serviceId,
+          image: `${registryEntry.image}:${version}`,
+        }
+      })
+    onStart({ services: serviceSpecs })
+  }
+
   // LEVEL 2: Expanded category detail
   if (expandedCategory && grouped[expandedCategory]) {
     const svcs = grouped[expandedCategory]
@@ -214,7 +228,7 @@ export default function ConfigureScreen({ config, setConfig, onStart, onBack }) 
           })}
         </div>
 
-        <Button onClick={onStart} disabled={totalSelected === 0}>
+        <Button onClick={handleStart} disabled={totalSelected === 0}>
           <PlayIcon className="w-4 h-4" />
           Start Setup{totalSelected > 0 ? ` (${totalSelected})` : ''}
         </Button>
@@ -285,7 +299,7 @@ export default function ConfigureScreen({ config, setConfig, onStart, onBack }) 
         })}
       </div>
 
-      <Button onClick={onStart} disabled={totalSelected === 0}>
+      <Button onClick={handleStart} disabled={totalSelected === 0}>
         <PlayIcon className="w-4 h-4" />
         Start Setup{totalSelected > 0 ? ` (${totalSelected})` : ''}
       </Button>
