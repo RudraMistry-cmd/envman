@@ -181,16 +181,21 @@ def delete_environment(env_id: str):
     network_name = env_row[1]
 
     for c in containers:
-        container_name = f"envman_{c[2]}"
-        subprocess.run(
+        # c[2] is already the full container name (e.g. "envman_postgres")
+        container_name = c[2]
+        result = subprocess.run(
             ["docker", "rm", "-f", container_name],
             capture_output=True, text=True, timeout=30,
         )
+        if result.returncode != 0:
+            logger.warning("failed to remove container %s: %s", container_name, result.stderr.strip())
 
-    subprocess.run(
-        ["docker", "network", "remove", network_name],
+    result = subprocess.run(
+        ["docker", "network", "rm", network_name],
         capture_output=True, text=True, timeout=30,
     )
+    if result.returncode != 0:
+        logger.warning("failed to remove network %s: %s", network_name, result.stderr.strip())
 
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()

@@ -107,7 +107,7 @@ SERVICES = [
     ServiceDefinition(
         id="kafka",
         name="Kafka",
-        category="message_broker",
+        category="queue",
         image="confluentinc/cp-kafka",
         default_port=9092,
         default_env={},
@@ -116,7 +116,7 @@ SERVICES = [
     ServiceDefinition(
         id="nats",
         name="NATS",
-        category="message_broker",
+        category="queue",
         image="nats",
         default_port=4222,
         default_env={},

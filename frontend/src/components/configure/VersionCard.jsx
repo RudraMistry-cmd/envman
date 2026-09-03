@@ -42,6 +42,10 @@ export default function VersionCard({ value, label, badge, selected, service, on
         {value}
       </span>
 
+      <span className={`text-xs mt-0.5 transition-colors ${selected ? 'text-zinc-400' : 'text-zinc-600'}`}>
+        {label}
+      </span>
+
       {badge && (
         <span className={`text-xs mt-0.5 transition-colors ${selected ? 'text-blue-400/70' : 'text-zinc-600'}`}>
           {badge}
