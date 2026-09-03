@@ -1,7 +1,25 @@
-import { CheckIcon, NodeIcon, PostgresIcon } from '../shared/icons'
+import { CheckIcon, NodeIcon, PostgresIcon, DatabaseIcon, CacheIcon, QueueIcon, SearchIcon, StorageIcon } from '../shared/icons'
+
+const SERVICE_ICONS = {
+  node: NodeIcon,
+  postgres: PostgresIcon,
+  python: DatabaseIcon,
+  mysql: DatabaseIcon,
+  mongo: DatabaseIcon,
+  sqlite: DatabaseIcon,
+  couchdb: DatabaseIcon,
+  redis: CacheIcon,
+  rabbitmq: QueueIcon,
+  kafka: QueueIcon,
+  nats: QueueIcon,
+  elasticsearch: SearchIcon,
+  meilisearch: SearchIcon,
+  typesense: SearchIcon,
+  minio: StorageIcon,
+}
 
 export default function VersionCard({ value, label, badge, selected, service, onSelect }) {
-  const ServiceIcon = service === 'node' ? NodeIcon : PostgresIcon
+  const ServiceIcon = SERVICE_ICONS[service] || DatabaseIcon
 
   return (
     <button

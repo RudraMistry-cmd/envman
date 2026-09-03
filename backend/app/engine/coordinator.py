@@ -37,6 +37,7 @@ from app.engine.executor import execute_step
 from app.engine.verifier import verify_environment
 from app.models.environment import EnvironmentConfig
 from app.engine.state import store_environment
+from app.storage.db import delete_environment
 from app.events.bus import emit
 from app.utils.logger import get_logger
 
@@ -99,6 +100,8 @@ async def run_setup(config: EnvironmentConfig) -> str:
                     "message": f"Step {step.id} failed: {str(e)}",
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                 })
+                # Tear down partially-created environment
+                delete_environment(env_id)
                 return env_id
 
             # Check result
@@ -112,6 +115,8 @@ async def run_setup(config: EnvironmentConfig) -> str:
                     "message": f"Step {step.id} failed: {result['stderr'][:200]}",
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                 })
+                # Tear down partially-created environment
+                delete_environment(env_id)
                 return env_id
 
             # Step succeeded

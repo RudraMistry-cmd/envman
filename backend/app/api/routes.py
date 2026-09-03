@@ -25,6 +25,7 @@ from fastapi import APIRouter
 from app.engine.coordinator import run_setup
 from app.models.environment import EnvironmentConfig
 from app.registry.services import get_all_services
+from app.storage.db import get_all_environments, save_environment, delete_environment
 from app.utils.logger import get_logger
 
 logger = get_logger("routes")
@@ -54,6 +55,20 @@ def list_services():
     An API endpoint exposing EnvMan's supported ecosystem.
     """
     return get_all_services()
+
+
+@router.get("/environments")
+def list_environments():
+    """Return all environments with their service lists and status."""
+    environments = get_all_environments()
+    return environments
+
+
+@router.delete("/environments/{env_id}")
+def delete_env(env_id: str):
+    """Stop and remove all containers, the network, and DB records for an environment."""
+    delete_environment(env_id)
+    return {"status": "deleted", "environment_id": env_id}
 
 
 @router.post("/setup")
