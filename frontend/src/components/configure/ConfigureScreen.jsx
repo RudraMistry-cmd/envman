@@ -32,15 +32,15 @@ const VERSION_OPTIONS = {
     { value: '7', label: 'MongoDB 7', badge: 'Latest', service: 'mongo' },
   ],
   redis: [{ value: '7', label: 'Redis 7', badge: 'Latest', service: 'redis' }],
-  elasticsearch: [{ value: '8', label: 'Elasticsearch 8', badge: 'Latest', service: 'elasticsearch' }],
-  meilisearch: [{ value: '1', label: 'MeiliSearch 1', badge: 'Latest', service: 'meilisearch' }],
-  typesense: [{ value: '27', label: 'Typesense 27', badge: 'Latest', service: 'typesense' }],
+  elasticsearch: [{ value: '8.14.0', label: 'Elasticsearch 8.14', badge: 'Latest', service: 'elasticsearch' }],
+  meilisearch: [{ value: 'v1', label: 'MeiliSearch v1', badge: 'Latest', service: 'meilisearch' }],
+  typesense: [{ value: '27.1', label: 'Typesense 27.1', badge: 'Latest', service: 'typesense' }],
   minio: [{ value: 'latest', label: 'MinIO', badge: 'Latest', service: 'minio' }],
   rabbitmq: [{ value: '3', label: 'RabbitMQ 3', badge: 'Latest', service: 'rabbitmq' }],
-  kafka: [{ value: '7', label: 'Kafka 7', badge: 'Latest', service: 'kafka' }],
+  kafka: [{ value: '7.5.16', label: 'Kafka 7.5', badge: 'Latest', service: 'kafka' }],
   nats: [{ value: '2', label: 'NATS 2', badge: 'Latest', service: 'nats' }],
   couchdb: [{ value: '3', label: 'CouchDB 3', badge: 'Latest', service: 'couchdb' }],
-  sqlite: [{ value: '3', label: 'SQLite 3', badge: 'Latest', service: 'sqlite' }],
+  sqlite: [{ value: '3', label: 'SQLite 3', badge: 'Embedded', service: 'sqlite' }],
 }
 
 const CATEGORY_META = {
