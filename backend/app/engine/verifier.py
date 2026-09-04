@@ -56,7 +56,6 @@ HEALTH_CHECK_DISPATCH = {
     "http_get": "_http_get_check",
     "http_get_with_api_key": "_http_get_with_api_key_check",
     "kafka_api_version": "_kafka_api_version",
-    "sqlite_version": "_sqlite_version",
 }
 
 # How many times to retry checking Postgres
@@ -259,18 +258,6 @@ async def _kafka_api_version(container_name: str) -> Dict[str, Any]:
     }
 
 
-async def _sqlite_version(container_name: str) -> Dict[str, Any]:
-    """Check SQLite CLI is available in the container.
-
-    WHY: SQLite is embedded — no daemon to check. Just confirm binary exists.
-    """
-    result = await run_command([
-        "docker", "exec", container_name, "sqlite3", "--version"
-    ])
-    return {
-        "success": result["code"] == 0,
-        "version": result["stdout"].strip() if result["code"] == 0 else None,
-    }
 
 
 # ===== Health check URL configuration =====
@@ -479,13 +466,6 @@ async def _verify_service(name: str, image: str, port: int = None) -> Dict[str, 
             "detail": kafka_result["output"] if kafka_result["success"] else kafka_result["error"],
         })
 
-    elif check_type == "sqlite_version":
-        sqlite_result = await _sqlite_version(container_name)
-        checks.append({
-            "name": "sqlite_version",
-            "passed": sqlite_result["success"],
-            "detail": sqlite_result.get("version", "sqlite3 not found"),
-        })
 
     else:
         # Unsupported check type

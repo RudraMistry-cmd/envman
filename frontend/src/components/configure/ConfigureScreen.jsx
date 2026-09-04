@@ -40,7 +40,6 @@ const VERSION_OPTIONS = {
   kafka: [{ value: '7.5.16', label: 'Kafka 7.5', badge: 'Latest', service: 'kafka' }],
   nats: [{ value: '2', label: 'NATS 2', badge: 'Latest', service: 'nats' }],
   couchdb: [{ value: '3', label: 'CouchDB 3', badge: 'Latest', service: 'couchdb' }],
-  sqlite: [{ value: '3', label: 'SQLite 3', badge: 'Embedded', service: 'sqlite' }],
 }
 
 const CATEGORY_META = {

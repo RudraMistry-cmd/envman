@@ -65,15 +65,6 @@ SERVICES = [
         health_check_type="mongo_ping"
     ),
     ServiceDefinition(
-        id="sqlite",
-        name="SQLite",
-        category="database",
-        image="sqlite",
-        default_port=None,
-        default_env={},
-        health_check_type="sqlite_version"
-    ),
-    ServiceDefinition(
         id="couchdb",
         name="CouchDB",
         category="database",

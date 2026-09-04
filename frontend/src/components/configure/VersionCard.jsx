@@ -6,7 +6,6 @@ const SERVICE_ICONS = {
   python: DatabaseIcon,
   mysql: DatabaseIcon,
   mongo: DatabaseIcon,
-  sqlite: DatabaseIcon,
   couchdb: DatabaseIcon,
   redis: CacheIcon,
   rabbitmq: QueueIcon,
