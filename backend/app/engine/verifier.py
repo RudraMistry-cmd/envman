@@ -299,19 +299,26 @@ CONNECTION_BUILDERS = {
 }
 
 
-def build_connection_info(service_id: str, image: str, host_port, default_env=None) -> dict:
+def build_connection_info(service_id: str, image: str, host_port, default_env=None, *,
+                          allow_registry_default: bool = False) -> dict:
     """Build connection info dict {host_port, connection_string, connection_type}.
 
     Rules:
     - If host_port is provided, use it.
-    - If host_port is None, try registry default_port via get_service_by_image(image).default_port.
+    - If host_port is None, return all-None (no verified binding) UNLESS
+      allow_registry_default is explicitly True (cosmetic defaults only -
+      NEVER for values presented as live reachability).
     - node/python/None -> {host_port: None, connection_string: None, connection_type: None}
     - Otherwise map image prefix to connection_type and build connection_string.
     """
     from app.registry.services import get_service_by_image
 
-    # If host_port is None, try to get default_port from registry
+    # If host_port is None, only consult the registry when explicitly allowed.
+    # A registry default is not proof of a live -p binding and must never be
+    # presented as verified truth.
     if host_port is None:
+        if not allow_registry_default:
+            return {"host_port": None, "connection_string": None, "connection_type": None}
         svc = get_service_by_image(image)
         if svc and svc.default_port is not None:
             host_port = svc.default_port
@@ -338,21 +345,23 @@ def build_connection_info(service_id: str, image: str, host_port, default_env=No
     return {"host_port": host_port, "connection_string": connection_string, "connection_type": connection_type}
 
 
-async def get_actual_host_port(container_name: str, fallback: int = None) -> int:
+async def get_actual_host_port(container_name: str):
     """Get the actual host port from docker inspect JSON output.
 
     Runs: docker inspect --format {{json .NetworkSettings.Ports}} <container_name>
     Parses JSON to find the first binding's HostPort integer.
-    Returns fallback if inspect fails or no port binding found.
+    Returns None if inspect fails or no real port binding exists.
+    A registry default is deliberately NOT substituted here: absence of a
+    binding means "not reachable", and callers must report that honestly.
     """
     result = await run_command(["docker", "inspect", "--format", "{{json .NetworkSettings.Ports}}", container_name])
     if result["code"] != 0:
-        return fallback
+        return None
 
     try:
         ports_json = json.loads(result["stdout"])
     except (json.JSONDecodeError, TypeError):
-        return fallback
+        return None
 
     # ports_json is a dict mapping "port/tcp" -> list of {"HostIp": "...", "HostPort": "..."}
     for port_binding in ports_json.values():
@@ -364,7 +373,7 @@ async def get_actual_host_port(container_name: str, fallback: int = None) -> int
                 except (ValueError, TypeError):
                     pass
 
-    return fallback
+    return None
 
 
 async def _discover_envman_containers() -> List[Dict[str, str]]:
@@ -438,15 +447,16 @@ async def _verify_service(name: str, image: str, port: int = None) -> Dict[str, 
     # Look up service in registry - early for connection info
     svc = get_service_by_image(image)
 
-    # Determine fallback port: param port first, then registry default_port
-    fallback_port = port if port is not None else (svc.default_port if svc else None)
-
-    # Get actual host port from docker inspect, fall back to registry default
+    # Resolve the ACTUAL host port from docker inspect. No registry fallback:
+    # a default port is not proof of a live -p binding and must never be
+    # presented as verified truth. (The `port` param is still passed through
+    # to the tcp_port health check below, which correctly probes the
+    # container-internal port.)
     try:
-        host_port = await get_actual_host_port(container_name, fallback_port)
+        host_port = await get_actual_host_port(container_name)
     except Exception:
-        logger.warning("failed to get host port for '%s', using fallback", container_name)
-        host_port = fallback_port
+        logger.warning("failed to inspect host port for '%s', reporting unknown", container_name)
+        host_port = None
 
     # Build connection info
     connection_info = build_connection_info(name, image, host_port, svc.default_env if svc else None)

@@ -129,13 +129,45 @@ def get_containers(env_id: str):
     return rows
 
 
+def _inspect_host_port(container_name: str):
+    """Return the live HostPort int for a container, or None.
+
+    WHY: The dashboard must show only real bindings. The db layer is sync,
+    so this uses a short-timeout subprocess directly. ANY failure (docker
+    down, no such container, no binding, unparsable output) returns None
+    and never raises - a broken lookup must degrade to "unknown", not 500.
+    """
+    import json
+    import subprocess
+
+    try:
+        result = subprocess.run(
+            ["docker", "inspect", "--format", "{{json .NetworkSettings.Ports}}", container_name],
+            capture_output=True, text=True, timeout=10,
+        )
+    except Exception:
+        return None
+    if result.returncode != 0 or not (result.stdout or "").strip():
+        return None
+    try:
+        ports_json = json.loads(result.stdout.strip())
+    except (ValueError, TypeError):
+        return None
+    try:
+        for binding in ports_json.values():
+            if isinstance(binding, list) and binding and "HostPort" in binding[0]:
+                return int(binding[0]["HostPort"])
+    except (ValueError, TypeError, AttributeError):
+        return None
+    return None
+
+
 def get_all_environments():
     """Retrieve all environments with their container lists.
 
     Returns: list of dicts with keys:
         id, network_name, created_at, containers (list of dicts)
     """
-    from app.registry.services import get_service_by_image
     from app.engine.verifier import build_connection_info
 
     conn = sqlite3.connect(DB_PATH)
@@ -163,12 +195,12 @@ def get_all_environments():
             # Derive service_id from container name (strip envman_ prefix)
             service_id = name.replace("envman_", "", 1) if name.startswith("envman_") else name
 
-            # Resolve host_port: try stored value first, then registry default_port
+            # Resolve host_port: stored value first, else LIVE docker inspect.
+            # Never substitute a registry default: no verified binding means
+            # host_port None, and build_connection_info reports it honestly.
             host_port = stored_host_port
             if host_port is None:
-                svc = get_service_by_image(image)
-                if svc and svc.default_port is not None:
-                    host_port = svc.default_port
+                host_port = _inspect_host_port(name)
 
             # Build connection_info using host_port
             connection_info = build_connection_info(service_id, image, host_port)
