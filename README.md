@@ -38,12 +38,12 @@ of guessing a service's identity from its image name, so adding a new
 service means adding one registry entry plus (if needed) one new health
 check function, not touching the core pipeline.
 
-## Currently supported services (15)
+## Currently supported services (14)
 
 | Category | Services |
 |---|---|
 | Runtimes | Node.js, Python |
-| Databases | PostgreSQL, MySQL, MongoDB, SQLite, CouchDB |
+| Databases | PostgreSQL, MySQL, MongoDB, CouchDB |
 | Cache | Redis |
 | Message queues | RabbitMQ, Kafka, NATS |
 | Search | Elasticsearch, MeiliSearch, Typesense |
@@ -122,10 +122,11 @@ Example request to `/setup`:
 Being upfront about what's not done yet, rather than letting the README
 oversell it:
 
-- **Frontend only exposes 2 of 15 services** (Node + Postgres) — the backend
-  supports all 15, the UI hasn't caught up.
-- **No cleanup/teardown mechanism.** If a multi-service setup fails partway,
-  already-started containers are left running with no automatic cleanup.
+- **No automatic teardown of orphaned resources beyond a failed setup run.**
+  A failed setup during `/setup` correctly rolls back what it started, and
+  the dashboard's Delete action correctly removes a full environment's
+  containers/network — but there's no periodic reconciliation for drift
+  (e.g. a container stopped or removed outside EnvMan).
 - **No automated test suite.** Verification so far has been manual,
   evidence-based checks against live Docker containers, not a CI-run test
   suite.
