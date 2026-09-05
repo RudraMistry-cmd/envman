@@ -1,39 +1,23 @@
-# Mission: Phase 2 - Service Expansion
+# Mission: Host-reachable environments - expose ports + connection strings
 
-## M1: Service Registry Expansion | status: completed
-
-### T1.1: Add 8 New ServiceDefinitions to services.py | agent:Worker
-- [x] S1.1.1: Add sqlite service (database, no port, sqlite_version) | size:S
-- [x] S1.1.2: Add couchdb service (database, port 5984, http_get) | size:S
-- [x] S1.1.3: Add kafka service (message_broker, port 9092, kafka_api_version) | size:S
-- [x] S1.1.4: Add nats service (message_broker, port 4222, http_get) | size:S
-- [x] S1.1.5: Add elasticsearch service (search, port 9200, http_get) | size:S
-- [x] S1.1.6: Add meilisearch service (search, port 7700, http_get) | size:S
-- [x] S1.1.7: Add typesense service (search, port 8108, http_get_with_api_key) | size:S
-- [x] S1.1.8: Add minio service (storage, port 9000, http_get) | size:S
-
-### T1.2: Fix mongo health check type | agent:Worker | depends:T1.1
-- [x] S1.2.1: Change mongo health_check_type from tcp_port to mongo_ping | size:S
-
-### T1.3: Reviewer Verification - Registry | agent:Reviewer | depends:T1.1,T1.2
-- [x] S1.3.1: Verify 15 services registered | size:S
-
-## M2: Verifier Health Checks | status: completed
-
-### T2.1: Add health check functions to verifier.py | agent:Worker
-- [x] S2.1.1: Add _http_get_check function (shared by couchdb, elasticsearch, meilisearch, minio) | size:S
-- [x] S2.1.2: Add _http_get_with_api_key_check function (for typesense) | size:S
-- [x] S2.1.3: Add _mongo_ping function (real mongosh check) | size:S
-- [x] S2.1.4: Add _kafka_api_version function (broker API probe) | size:S
-- [x] S2.1.5: Add _sqlite_version function (embedded DB check) | size:S
-- [x] S2.1.6: Update HEALTH_CHECK_DISPATCH map with 5 new types | size:S
-- [x] S2.1.7: Update _verify_service dispatch logic with new elif branches | size:S
-
-### T2.2: Reviewer Verification - Verifier | agent:Reviewer | depends:T2.1
-- [x] S2.2.1: Verify 9 health check types in dispatch map | size:S
-
-## M3: Integration Verification | status: completed | depends:M1,M2
-
-### T3.1: Final system verification | agent:Reviewer | depends:M1,M2
-- [x] S3.1.1: Verify all 15 services load correctly | size:S
-- [x] S3.1.2: Verify no regressions in existing 7 services | size:S
+## M1: Host-reachable environments | status: completed
+### T1.1: Frontend ConfigureScreen port wiring | agent:Worker
+- [x] S1.1.1: Update handleStart to include port from registryEntry.default_port when present, omit for node/python | size:S
+- [x] S1.1.2: Verify payload shape matches ServiceSpec port:int and registry fetch includes default_port | size:S
+### T1.2: Backend port-conflict clear failure | agent:Worker
+- [x] S1.2.1: Add is_host_port_in_use helper (socket bind check) + unit tests | size:S
+- [x] S1.2.2: Pre-check in executor _start_container before docker run, fail step with specific error naming conflicting port | size:M
+- [x] S1.2.3: Ensure coordinator propagates step_failed with port conflict message | size:S
+### T1.3: Backend verifier host_port + connection_string | agent:Worker
+- [x] S1.3.1: Add build_connection_info helper mapping service id -> host_port + connection string | size:M
+- [x] S1.3.2: Include host_port, connection_string, connection_type in _verify_service return and verify_environment results | size:S
+- [x] S1.3.3: Resolve actual host port via docker inspect HostPort fallback + registry default_port | size:S
+### T1.4: Frontend ServiceCard display + copy | agent:Worker
+- [x] S1.4.1: Display host_port and connection_string in ServiceCard with copy-to-clipboard button + fallback when absent | size:S
+- [x] S1.4.2: Verify ResultsScreen passes through new fields | size:S
+### T1.5: Dashboard connection info | agent:Worker | depends:T1.3
+- [x] S1.5.1: Enrich GET /environments response with host_port/connection_string per container | size:M
+- [x] S1.5.2: Update EnvironmentsDashboard.jsx to show same connection info + copy button | size:S
+### T1.6: Full system verification | agent:Reviewer | depends:T1.1,T1.2,T1.3,T1.4,T1.5
+- [x] S1.6.1: Run pytest Tier1, verify no regressions | size:S
+- [x] S1.6.2: E2E 3+ services host reachability from host shell on shown host:port | size:M

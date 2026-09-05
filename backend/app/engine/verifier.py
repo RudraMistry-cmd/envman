@@ -35,6 +35,7 @@ THINK OF IT LIKE:
 """
 
 import asyncio
+import json
 import subprocess
 from typing import Dict, Any, List
 from app.engine.executor import run_command
@@ -280,6 +281,92 @@ def _get_health_check_url(image: str) -> str:
     return ""
 
 
+# ===== Connection info builders =====
+# Maps service image prefixes to connection type and format template
+CONNECTION_BUILDERS = {
+    "postgres": ("postgres", lambda p: f"postgres://postgres:postgres@localhost:{p}/postgres"),
+    "redis": ("redis", lambda p: f"redis://localhost:{p}"),
+    "mysql": ("mysql", lambda p: f"mysql://root@localhost:{p}/"),
+    "mongo": ("mongodb", lambda p: f"mongodb://localhost:{p}"),
+    "rabbitmq": ("amqp", lambda p: f"amqp://guest:guest@localhost:{p}/"),
+    "couchdb": ("http", lambda p: f"http://localhost:{p}/_up"),
+    "elasticsearch": ("http", lambda p: f"http://localhost:{p}"),
+    "meilisearch": ("http", lambda p: f"http://localhost:{p}"),
+    "typesense": ("http", lambda p: f"http://localhost:{p}"),
+    "minio": ("http", lambda p: f"http://localhost:{p}"),
+    "nats": ("nats", lambda p: f"nats://localhost:{p}"),
+    "kafka": ("kafka", lambda p: f"kafka://localhost:{p}"),
+}
+
+
+def build_connection_info(service_id: str, image: str, host_port, default_env=None) -> dict:
+    """Build connection info dict {host_port, connection_string, connection_type}.
+
+    Rules:
+    - If host_port is provided, use it.
+    - If host_port is None, try registry default_port via get_service_by_image(image).default_port.
+    - node/python/None -> {host_port: None, connection_string: None, connection_type: None}
+    - Otherwise map image prefix to connection_type and build connection_string.
+    """
+    from app.registry.services import get_service_by_image
+
+    # If host_port is None, try to get default_port from registry
+    if host_port is None:
+        svc = get_service_by_image(image)
+        if svc and svc.default_port is not None:
+            host_port = svc.default_port
+
+    # node/python/None port -> no connection
+    if not host_port:
+        return {"host_port": None, "connection_string": None, "connection_type": None}
+
+    # Determine connection_type and connection_string from CONNECTION_BUILDERS
+    connection_type = None
+    connection_string = None
+
+    # Try matching by service_id prefix (e.g., "postgres", "redis")
+    for prefix, (ctype, fn) in CONNECTION_BUILDERS.items():
+        if image.startswith(prefix) or service_id == prefix:
+            connection_type = ctype
+            connection_string = fn(host_port)
+            break
+
+    # Fallback: if no match, return basic None
+    if connection_type is None:
+        return {"host_port": host_port, "connection_string": None, "connection_type": None}
+
+    return {"host_port": host_port, "connection_string": connection_string, "connection_type": connection_type}
+
+
+async def get_actual_host_port(container_name: str, fallback: int = None) -> int:
+    """Get the actual host port from docker inspect JSON output.
+
+    Runs: docker inspect --format {{json .NetworkSettings.Ports}} <container_name>
+    Parses JSON to find the first binding's HostPort integer.
+    Returns fallback if inspect fails or no port binding found.
+    """
+    result = await run_command(["docker", "inspect", "--format", "{{json .NetworkSettings.Ports}}", container_name])
+    if result["code"] != 0:
+        return fallback
+
+    try:
+        ports_json = json.loads(result["stdout"])
+    except (json.JSONDecodeError, TypeError):
+        return fallback
+
+    # ports_json is a dict mapping "port/tcp" -> list of {"HostIp": "...", "HostPort": "..."}
+    for port_binding in ports_json.values():
+        if isinstance(port_binding, list) and len(port_binding) > 0:
+            binding = port_binding[0]
+            if "HostPort" in binding:
+                try:
+                    return int(binding["HostPort"])
+                except (ValueError, TypeError):
+                    pass
+
+    return fallback
+
+
 async def _discover_envman_containers() -> List[Dict[str, str]]:
     """Discover envman containers via Docker when in-memory registry is empty.
 
@@ -331,6 +418,9 @@ async def _verify_service(name: str, image: str, port: int = None) -> Dict[str, 
             "service": name,
             "status": "not_found",
             "checks": [],
+            "host_port": None,
+            "connection_string": None,
+            "connection_type": None,
         }
 
     # Check if container is running
@@ -340,12 +430,29 @@ async def _verify_service(name: str, image: str, port: int = None) -> Dict[str, 
             "service": name,
             "status": "not_running",
             "checks": [],
+            "host_port": None,
+            "connection_string": None,
+            "connection_type": None,
         }
 
-    # Look up service in registry
-    service = get_service_by_image(image)
+    # Look up service in registry - early for connection info
+    svc = get_service_by_image(image)
 
-    if not service:
+    # Determine fallback port: param port first, then registry default_port
+    fallback_port = port if port is not None else (svc.default_port if svc else None)
+
+    # Get actual host port from docker inspect, fall back to registry default
+    try:
+        host_port = await get_actual_host_port(container_name, fallback_port)
+    except Exception:
+        logger.warning("failed to get host port for '%s', using fallback", container_name)
+        host_port = fallback_port
+
+    # Build connection info
+    connection_info = build_connection_info(name, image, host_port, svc.default_env if svc else None)
+
+    # Look up service in registry (reuse svc)
+    if not svc:
         logger.warning("no registry match for image '%s'", image)
         return {
             "service": name,
@@ -355,10 +462,13 @@ async def _verify_service(name: str, image: str, port: int = None) -> Dict[str, 
                 "passed": False,
                 "detail": "no registry match for image",
             }],
+            "host_port": connection_info["host_port"],
+            "connection_string": connection_info["connection_string"],
+            "connection_type": connection_info["connection_type"],
         }
 
     checks = []
-    check_type = service.health_check_type
+    check_type = svc.health_check_type
 
     # Dispatch to appropriate health check
     if check_type == "pg_isready":
@@ -443,7 +553,7 @@ async def _verify_service(name: str, image: str, port: int = None) -> Dict[str, 
     elif check_type == "http_get_with_api_key":
         url = _get_health_check_url(image)
         # Typesense API key from default_env
-        api_key = service.default_env.get("TYPESENSE_API_KEY", "xyz")
+        api_key = svc.default_env.get("TYPESENSE_API_KEY", "xyz")
         if not url:
             checks.append({
                 "name": "http_get_with_api_key",
@@ -482,6 +592,9 @@ async def _verify_service(name: str, image: str, port: int = None) -> Dict[str, 
         "service": name,
         "status": status,
         "checks": checks,
+        "host_port": connection_info["host_port"],
+        "connection_string": connection_info["connection_string"],
+        "connection_type": connection_info["connection_type"],
     }
 
 

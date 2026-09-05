@@ -93,10 +93,33 @@ export default function EnvironmentsDashboard({ onNew }) {
                           : 'bg-zinc-500/10 text-zinc-500 border border-zinc-500/20'
                       }`}
                     >
-                      <span className={`w-1.5 h-1.5 rounded-full ${
-                        c.status === 'running' ? 'bg-green-400' : 'bg-zinc-500'
-                      }`} />
-                      {c.name}
+                      <span className={`w-1.5 h-1.5 rounded-full ${c.status === 'running' ? 'bg-green-400' : 'bg-zinc-500'}`} />
+                      <span className="flex-1 min-w-0 truncate">{c.name}</span>
+
+                      {/* Connection string display with copy button */}
+                      {c.connection_string && (
+                        <div className="ml-2">
+                          <span className="text-xs text-zinc-400 font-mono truncate w-24 pr-2">
+                            {c.connection_string}
+                          </span>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(c.connection_string).then(() => {
+                                // Copy action
+                              })
+                            }}
+                            className="text-zinc-600 text-xs hover:text-zinc-300 transition-colors p-1 rounded"
+                            title="Copy connection string"
+                          >
+                            Copy
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Fallback when neither host_port nor connection_string */}
+                      {!c.host_port && !c.connection_string && (
+                        <span className="text-xs text-zinc-500 ml-2">Docker network only</span>
+                      )}
                     </span>
                   ))}
                   {env.containers.length === 0 && (

@@ -56,7 +56,9 @@ def init_db():
             environment_id TEXT,
             name TEXT,
             image TEXT,
-            status TEXT
+            status TEXT,
+            host_port INTEGER,
+            connection_string TEXT
         )
     """)
 
@@ -82,7 +84,8 @@ def save_environment(env_id: str, network_name: str):
     conn.close()
 
 
-def save_container(container_id: str, env_id: str, name: str, image: str, status: str):
+def save_container(container_id: str, env_id: str, name: str, image: str, status: str,
+                   host_port: int = None, connection_string: str = None):
     """Persist a container record.
 
     WHY: We need to track which containers belong to which environment
@@ -92,8 +95,9 @@ def save_container(container_id: str, env_id: str, name: str, image: str, status
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT OR REPLACE INTO containers (id, environment_id, name, image, status) VALUES (?, ?, ?, ?, ?)",
-        (container_id, env_id, name, image, status)
+        "INSERT OR REPLACE INTO containers (id, environment_id, name, image, status, host_port, connection_string) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (container_id, env_id, name, image, status, host_port, connection_string)
     )
     conn.commit()
     conn.close()
@@ -115,7 +119,7 @@ def get_environment(env_id: str):
 def get_containers(env_id: str):
     """Retrieve all containers for an environment.
 
-    Returns: list of (id, environment_id, name, image, status) tuples
+    Returns: list of (id, environment_id, name, image, status, host_port, connection_string) tuples
     """
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -131,6 +135,9 @@ def get_all_environments():
     Returns: list of dicts with keys:
         id, network_name, created_at, containers (list of dicts)
     """
+    from app.registry.services import get_service_by_image
+    from app.engine.verifier import build_connection_info
+
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
@@ -142,10 +149,43 @@ def get_all_environments():
     for env_row in env_rows:
         env_id, network_name, created_at = env_row
         containers = get_containers(env_id)
-        container_list = [
-            {"id": c[0], "name": c[2], "image": c[3], "status": c[4]}
-            for c in containers
-        ]
+        container_list = []
+        for c in containers:
+            # c = (id, environment_id, name, image, status) - older DBs have
+            # exactly 5 columns; tolerate a 7-col shape if a migration added
+            # stored host_port/connection_string columns.
+            if len(c) >= 7:
+                container_id, env_id_, name, image, status, stored_host_port, stored_connection_string = c[:7]
+            else:
+                container_id, env_id_, name, image, status = c[:5]
+                stored_host_port, stored_connection_string = None, None
+
+            # Derive service_id from container name (strip envman_ prefix)
+            service_id = name.replace("envman_", "", 1) if name.startswith("envman_") else name
+
+            # Resolve host_port: try stored value first, then registry default_port
+            host_port = stored_host_port
+            if host_port is None:
+                svc = get_service_by_image(image)
+                if svc and svc.default_port is not None:
+                    host_port = svc.default_port
+
+            # Build connection_info using host_port
+            connection_info = build_connection_info(service_id, image, host_port)
+
+            container_list.append({
+                "id": container_id,
+                "name": name,
+                "image": image,
+                "status": status,
+                "host_port": connection_info["host_port"],
+                "connection_string": connection_info["connection_string"],
+                "connection_type": connection_info["connection_type"],
+                # Preserve stored values for backward compatibility
+                "_stored_host_port": stored_host_port,
+                "_stored_connection_string": stored_connection_string,
+            })
+
         environments.append({
             "id": env_id,
             "network_name": network_name,

@@ -1,49 +1,46 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { CheckIcon, XIcon, ChevronIcon } from '../shared/icons'
 
 export default function ServiceCard({ service }) {
   const [expanded, setExpanded] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const timer = useRef(null)
   const allPassed = service.checks?.every(c => c.passed)
-
+  const hostPort = service.host_port
+  const conn = service.connection_string
+  const doCopy = async () => {
+    if (!conn) return
+    try { await navigator.clipboard.writeText(conn) }
+    catch { const ta = document.createElement('textarea'); ta.value = conn; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy') } catch {} document.body.removeChild(ta) }
+    setCopied(true); clearTimeout(timer.current); timer.current = setTimeout(() => setCopied(false), 2000)
+  }
   return (
-    <div className={`rounded-card border transition-all duration-200 ${
-      allPassed
-        ? 'border-green-500/20 bg-green-500/[0.03]'
-        : 'border-red-500/20 bg-red-500/[0.03]'
-    }`}>
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-3 px-4 py-3 text-left"
-      >
-        <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
-          allPassed ? 'bg-green-500/20' : 'bg-red-500/20'
-        }`}>
-          {allPassed
-            ? <CheckIcon className="w-3.5 h-3.5 text-green-400" />
-            : <XIcon className="w-3.5 h-3.5 text-red-400" />
-          }
+    <div className={`rounded-card border transition-all duration-200 ${allPassed ? 'border-green-500/20 bg-green-500/[0.03]' : 'border-red-500/20 bg-red-500/[0.03]'}`}>
+      <button onClick={() => setExpanded(!expanded)} className="w-full flex items-center gap-3 px-4 py-3 text-left">
+        <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${allPassed ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
+          {allPassed ? <CheckIcon className="w-3.5 h-3.5 text-green-400" /> : <XIcon className="w-3.5 h-3.5 text-red-400" />}
         </div>
-
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-white capitalize">{service.service}</p>
-          {service.version && (
-            <p className="text-xs text-zinc-500 font-mono">v{service.version}</p>
-          )}
+          {service.version && (<p className="text-xs text-zinc-500 font-mono">v{service.version}</p>)}
+          {hostPort ? (<p className="text-xs text-zinc-400 font-mono mt-1">localhost:{hostPort}</p>) : null}
         </div>
-
-        <ChevronIcon className={`w-4 h-4 text-zinc-600 transition-transform duration-200 ${
-          expanded ? 'rotate-180' : ''
-        }`} />
+        <ChevronIcon className={`w-4 h-4 text-zinc-600 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
       </button>
-
+      {conn ? (
+        <div className="px-4 pb-2 flex items-center gap-2">
+          <code className="text-xs text-zinc-300 font-mono truncate flex-1">{conn}</code>
+          <button onClick={doCopy} className="text-xs px-2 py-1 rounded bg-white/5 border border-white/10 text-zinc-300 hover:bg-white/10">{copied ? 'Copied!' : 'Copy'}</button>
+        </div>
+      ) : (
+        <p className="px-4 pb-2 text-xs text-zinc-600 italic">Runs inside Docker network - no host port</p>
+      )}
       {expanded && service.checks && (
         <div className="px-4 pb-3 border-t border-white/[0.04]">
           <div className="pt-3 space-y-2">
             {service.checks.map((check, i) => (
               <div key={i} className="flex items-center gap-2 text-xs">
-                <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                  check.passed ? 'bg-green-400' : 'bg-red-400'
-                }`} />
+                <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${check.passed ? 'bg-green-400' : 'bg-red-400'}`} />
                 <span className="text-zinc-400">{check.name}</span>
                 <span className="text-zinc-600">&mdash;</span>
                 <span className="text-zinc-500 truncate">{check.detail}</span>

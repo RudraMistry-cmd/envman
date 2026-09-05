@@ -30,6 +30,7 @@ THINK OF IT LIKE:
 """
 
 import asyncio
+import socket
 import subprocess
 from typing import Dict, Any, List
 from app.models.step import Step
@@ -63,6 +64,31 @@ def _run_sync(cmd: List[str], timeout: int) -> Dict[str, Any]:
         }
     except Exception as e:
         return {"stdout": "", "stderr": f"{type(e).__name__}: {e}", "code": -1}
+
+
+def is_host_port_in_use(port: int) -> bool:
+    """Check if a host port is already in use via socket bind attempt.
+
+    WHY: Prevent Docker port conflicts before attempting docker run -p.
+         If the host port is already occupied, docker will fail with a
+         confusing "port is already allocated" error.
+
+    HOW: Try to bind a socket to 0.0.0.0:port. If bind raises OSError
+         with errno 98 (EADDRINUSE) or 10048 (same on Windows), the port
+         is in use. Otherwise bind succeeds and port is free.
+    """
+    if port is None or port <= 0:
+        return False
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(("0.0.0.0", port))
+        return False  # bind succeeded -> port is free
+    except OSError as e:
+        # errno 98 = EADDRINUSE (Linux), errno 10048 = WSAEADDRINUSE (Windows)
+        if e.errno in (98, 10048):
+            return True  # port is already in use
+        # For other OSErrors, treat as "port free" to avoid false positives
+        return False
 
 
 async def run_command(cmd: List[str], timeout: int = 300) -> Dict[str, Any]:
@@ -175,6 +201,21 @@ async def _start_container(step: Step, network_name: str, env_id: str = None) ->
     if port:
         cmd.extend(["-p", port])
 
+    # Extract host port from param (for docker error normalization)
+    raw_port = step.params.get("port")
+    host_port = None
+    if raw_port:
+        if ":" in str(raw_port):
+            try:
+                host_port = int(str(raw_port).split(":")[0])
+            except ValueError:
+                host_port = None
+        else:
+            try:
+                host_port = int(raw_port)
+            except ValueError:
+                host_port = None
+
     # Volume mounting (if specified)
     volume = step.params.get("volume")
     if volume:
@@ -194,6 +235,19 @@ async def _start_container(step: Step, network_name: str, env_id: str = None) ->
     cmd.append(image)
 
     result = await run_command(cmd)
+
+    # Normalize docker error messages about port conflicts
+    if result["code"] != 0:
+        stderr_lower = result["stderr"].lower()
+        # Check for Docker's own port conflict messages and normalize
+        if "port is already allocated" in stderr_lower or "bind for" in stderr_lower:
+            # Try to extract the port number from the raw port param
+            if host_port:
+                normalized = f"Host port {host_port} is already in use - cannot start container '{name}'. Stop the conflicting service or choose a different port."
+            else:
+                normalized = f"Host port is already in use - cannot start container '{name}'. Stop the conflicting service or choose a different port."
+            logger.error(normalized)
+            return {"stdout": "", "stderr": normalized, "code": 1}
 
     if result["code"] == 0:
         container_id = result["stdout"]

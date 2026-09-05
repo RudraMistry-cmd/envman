@@ -104,9 +104,16 @@ export default function ConfigureScreen({ config, setConfig, onStart, onBack }) 
       .filter(([, version]) => version)
       .map(([serviceId, version]) => {
         const registryEntry = services.find(s => s.id === serviceId)
+        if (registryEntry && registryEntry.default_port != null) {
+          return {
+            name: serviceId,
+            image: `${registryEntry.image}:${version}`,
+            port: registryEntry.default_port,
+          }
+        }
         return {
           name: serviceId,
-          image: `${registryEntry.image}:${version}`,
+          image: `${registryEntry?.image || serviceId}:${version}`,
         }
       })
     onStart({ services: serviceSpecs })
