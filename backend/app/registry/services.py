@@ -43,7 +43,10 @@ SERVICES = [
         category="database",
         image="postgres",
         default_port=5432,
-        default_env={},
+        # Official image REFUSES fresh init without a superuser password
+        # (proven 2026-09-06: "must specify POSTGRES_PASSWORD"). Matches the
+        # postgres://postgres:postgres@... string the app already shows.
+        default_env={"POSTGRES_PASSWORD": "postgres"},
         health_check_type="pg_isready"
     ),
     ServiceDefinition(
@@ -52,7 +55,9 @@ SERVICES = [
         category="database",
         image="mysql",
         default_port=3306,
-        default_env={},
+        # Official image REFUSES to boot without one of these; empty root
+        # password matches the app's mysql://root@localhost:PORT/ string.
+        default_env={"MYSQL_ALLOW_EMPTY_PASSWORD": "yes"},
         health_check_type="tcp_port"
     ),
     ServiceDefinition(
@@ -70,7 +75,12 @@ SERVICES = [
         category="database",
         image="couchdb",
         default_port=5984,
-        default_env={},
+        # CouchDB 3.x REFUSES admin-party boot (proven live: must specify
+        # admin user+password). Dev defaults; /_up stays publicly readable.
+        default_env={
+            "COUCHDB_USER": "admin",
+            "COUCHDB_PASSWORD": "admin",
+        },
         health_check_type="http_get"
     ),
 
@@ -99,7 +109,10 @@ SERVICES = [
         id="kafka",
         name="Kafka",
         category="queue",
-        image="confluentinc/cp-kafka",
+        # apache/kafka boots standalone KRaft combined-mode with zero env
+        # (official quickstart: `docker run -d --name broker apache/kafka`).
+        # cp-kafka was dropped: it needs CLUSTER_ID + full KRaft env or ZK.
+        image="apache/kafka",
         default_port=9092,
         default_env={},
         health_check_type="kafka_api_version"
@@ -111,7 +124,9 @@ SERVICES = [
         image="nats",
         default_port=4222,
         default_env={},
-        health_check_type="http_get"
+        # nats image has no curl (code 127) so the in-container http check
+        # cannot run; TCP-open on the client port is the honest check.
+        health_check_type="tcp_port"
     ),
 
     # ===== SEARCH =====
@@ -121,7 +136,12 @@ SERVICES = [
         category="search",
         image="elasticsearch",
         default_port=9200,
-        default_env={},
+        # Single-node dev boot without certs; keeps plain-http 9200 so the
+        # http_get health check works.
+        default_env={
+            "discovery.type": "single-node",
+            "xpack.security.enabled": "false",
+        },
         health_check_type="http_get"
     ),
     ServiceDefinition(
@@ -139,8 +159,12 @@ SERVICES = [
         category="search",
         image="typesense/typesense",
         default_port=8108,
+        # Exits without --data-dir (proven live; /data doesn't exist in the
+        # image, /tmp does). Key stays env. No curl in image either, so the
+        # keyed http check can't run in-container: tcp_port on 8108 instead.
         default_env={"TYPESENSE_API_KEY": "xyz"},
-        health_check_type="http_get_with_api_key"
+        default_command=["--data-dir", "/tmp"],
+        health_check_type="tcp_port"
     ),
 
     # ===== STORAGE =====
@@ -150,7 +174,13 @@ SERVICES = [
         category="storage",
         image="minio/minio",
         default_port=9000,
-        default_env={},
+        # Explicit == image defaults; documents the console/API creds.
+        default_env={
+            "MINIO_ROOT_USER": "minioadmin",
+            "MINIO_ROOT_PASSWORD": "minioadmin",
+        },
+        # REQUIRED: image prints help and exits without a server command.
+        default_command=["server", "/data", "--console-address", ":9001"],
         health_check_type="http_get"
     ),
 ]

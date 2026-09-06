@@ -37,7 +37,7 @@ const VERSION_OPTIONS = {
   typesense: [{ value: '27.1', label: 'Typesense 27.1', badge: 'Latest', service: 'typesense' }],
   minio: [{ value: 'latest', label: 'MinIO', badge: 'Latest', service: 'minio' }],
   rabbitmq: [{ value: '3', label: 'RabbitMQ 3', badge: 'Latest', service: 'rabbitmq' }],
-  kafka: [{ value: '7.5.16', label: 'Kafka 7.5', badge: 'Latest', service: 'kafka' }],
+  kafka: [{ value: '3.8.0', label: 'Kafka 3.8', badge: 'Latest', service: 'kafka' }],
   nats: [{ value: '2', label: 'NATS 2', badge: 'Latest', service: 'nats' }],
   couchdb: [{ value: '3', label: 'CouchDB 3', badge: 'Latest', service: 'couchdb' }],
 }

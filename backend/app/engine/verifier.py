@@ -36,7 +36,6 @@ THINK OF IT LIKE:
 
 import asyncio
 import json
-import subprocess
 from typing import Dict, Any, List
 from app.engine.executor import run_command
 from app.engine.state import get_container, dump_registry
@@ -55,7 +54,6 @@ HEALTH_CHECK_DISPATCH = {
     # Phase 2 additions:
     "mongo_ping": "_mongo_ping",
     "http_get": "_http_get_check",
-    "http_get_with_api_key": "_http_get_with_api_key_check",
     "kafka_api_version": "_kafka_api_version",
 }
 
@@ -112,8 +110,10 @@ async def _pg_run_query(name: str) -> Dict[str, Any]:
      But can we actually RUN a query?
      This is the REAL test of whether Postgres works.
     """
+    # PGPASSWORD matches the registry default_env (POSTGRES_PASSWORD=postgres);
+    # without it psql fails with password auth now that a password is set.
     result = await run_command([
-        "docker", "exec", name,
+        "docker", "exec", "-e", "PGPASSWORD=postgres", name,
         "psql", "-U", "postgres", "-c", "SELECT 1 AS connected;"
     ])
     return {
@@ -168,31 +168,29 @@ async def _redis_ping(name: str) -> Dict[str, Any]:
     }
 
 
-def _tcp_port_check_sync(container_name: str, port: int) -> bool:
+async def _tcp_port_check(host_port: int, timeout: int = 5) -> bool:
+    """Probe a HOST port from the backend (host-side TCP connect).
+
+    WHY host-side instead of docker-exec bash /dev/tcp:
+    - Minimal images (nats: scratch) have NO shell - exec checks fail (127).
+    - A host connect proves exactly what the connection string promises:
+      reachability from outside Docker.
+    - Uniform for all tcp_port services (mysql, rabbitmq, nats).
+
+    Returns True iff 127.0.0.1:host_port accepts a connection.
     """
-    WHY:
-    Some services only need a basic port-level readiness check.
-
-    WHAT:
-    Verifies that a TCP port is open inside the container.
-
-    HOW:
-    Uses bash + /dev/tcp to probe port from within container.
-
-    THINK OF IT LIKE:
-    A minimal liveness probe — not full correctness, but connectivity.
-    """
-    cmd = [
-        "docker", "exec", container_name,
-        "bash", "-c", f"</dev/tcp/localhost/{port}"
-    ]
-    result = subprocess.run(cmd, capture_output=True)
-    return result.returncode == 0
-
-
-async def _tcp_port_check(container_name: str, port: int) -> bool:
-    """Async wrapper for TCP port check — runs blocking subprocess in thread."""
-    return await asyncio.to_thread(_tcp_port_check_sync, container_name, port)
+    try:
+        conn = asyncio.wait_for(
+            asyncio.open_connection("127.0.0.1", int(host_port)), timeout)
+        reader, writer = await conn
+        writer.close()
+        try:
+            await writer.wait_closed()
+        except Exception:  # noqa: BLE001
+            pass
+        return True
+    except Exception:  # noqa: BLE001 - refused/timeout/OSError all mean closed
+        return False
 
 
 # ===== Phase 2 Health Check Functions =====
@@ -225,21 +223,9 @@ async def _http_get_check(container_name: str, url: str, timeout: int = 5) -> Di
     return {
         "success": result["code"] == 0,
         "output": result["stdout"] if result["code"] == 0 else result["stderr"],
-    }
-
-
-async def _http_get_with_api_key_check(container_name: str, url: str, api_key: str) -> Dict[str, Any]:
-    """HTTP GET with API key header — for typesense.
-
-    WHY: Typesense requires API key for all endpoints including health.
-    """
-    result = await run_command([
-        "docker", "exec", container_name,
-        "curl", "-sf", "-H", f"X-TYPESENSE-API-KEY: {api_key}", url
-    ])
-    return {
-        "success": result["code"] == 0,
-        "output": result["stdout"] if result["code"] == 0 else result["stderr"],
+        # NOTE: images without curl (nats, minio) fail with code 127 here;
+        # callers must handle failed==False, and such services use tcp_port.
+        "error": result["stderr"] if result["code"] != 0 else None,
     }
 
 
@@ -249,9 +235,12 @@ async def _kafka_api_version(container_name: str) -> Dict[str, Any]:
     WHY: Official Kafka readiness check — proves broker accepts connections.
     NOTE: Kafka takes 15-30s to start. Retry logic is in verify_environment.
     """
+    # apache/kafka image: scripts live in /opt/kafka/bin (not on PATH),
+    # and only the .sh names exist (cp-kafka's bare wrapper is gone).
     result = await run_command([
         "docker", "exec", container_name,
-        "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"
+        "bash", "/opt/kafka/bin/kafka-broker-api-versions.sh",
+        "--bootstrap-server", "localhost:9092",
     ])
     return {
         "success": result["code"] == 0,
@@ -449,9 +438,8 @@ async def _verify_service(name: str, image: str, port: int = None) -> Dict[str, 
 
     # Resolve the ACTUAL host port from docker inspect. No registry fallback:
     # a default port is not proof of a live -p binding and must never be
-    # presented as verified truth. (The `port` param is still passed through
-    # to the tcp_port health check below, which correctly probes the
-    # container-internal port.)
+    # presented as verified truth. The tcp_port health check below probes
+    # this same host port from the backend (host-side connect).
     try:
         host_port = await get_actual_host_port(container_name)
     except Exception:
@@ -522,18 +510,22 @@ async def _verify_service(name: str, image: str, port: int = None) -> Dict[str, 
         })
 
     elif check_type == "tcp_port":
-        if not port:
+        if not host_port:
             checks.append({
                 "name": "tcp_port",
                 "passed": False,
-                "detail": "no port defined for service",
+                "detail": "no host port binding found for service",
             })
         else:
-            port_reachable = await _tcp_port_check(container_name, port)
+            port_reachable = await _tcp_port_check(host_port)
             checks.append({
                 "name": "tcp_port",
                 "passed": port_reachable,
-                "detail": f"port {port} reachable" if port_reachable else f"port {port} not reachable",
+                "detail": (
+                    f"host port {host_port} reachable"
+                    if port_reachable
+                    else f"host port {host_port} not reachable"
+                ),
             })
 
     elif check_type == "mongo_ping":
@@ -556,24 +548,6 @@ async def _verify_service(name: str, image: str, port: int = None) -> Dict[str, 
             http_result = await _http_get_check(container_name, url)
             checks.append({
                 "name": "http_get",
-                "passed": http_result["success"],
-                "detail": http_result["output"] if http_result["success"] else http_result["error"],
-            })
-
-    elif check_type == "http_get_with_api_key":
-        url = _get_health_check_url(image)
-        # Typesense API key from default_env
-        api_key = svc.default_env.get("TYPESENSE_API_KEY", "xyz")
-        if not url:
-            checks.append({
-                "name": "http_get_with_api_key",
-                "passed": False,
-                "detail": "no health check URL configured for this service",
-            })
-        else:
-            http_result = await _http_get_with_api_key_check(container_name, url, api_key)
-            checks.append({
-                "name": "http_get_with_api_key",
                 "passed": http_result["success"],
                 "detail": http_result["output"] if http_result["success"] else http_result["error"],
             })

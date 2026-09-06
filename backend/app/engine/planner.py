@@ -120,6 +120,14 @@ async def plan_environment(config: EnvironmentConfig) -> Plan:
         if merged_env:
             params["env"] = merged_env
 
+        # Thread startup command: explicit service.command wins, else the
+        # registry default_command (e.g. minio REQUIRES `server /data`).
+        # Executor appends it AFTER the image name (docker run ... img cmd).
+        registry_cmd = registry_svc.default_command if registry_svc else None
+        command = service.command or registry_cmd
+        if command:
+            params["command"] = list(command)
+
         steps.append(Step(
             id=f"start_{service.name}",
             type="start_container",

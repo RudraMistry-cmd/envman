@@ -72,8 +72,8 @@ class TestServiceImagePrefixLookup:
         assert svc is not None
         assert svc.id == "postgres"
 
-    def test_get_service_by_image_for_confluent_kafka(self):
-        svc = get_service_by_image("confluentinc/cp-kafka:7.5.16")
+    def test_get_service_by_image_for_apache_kafka(self):
+        svc = get_service_by_image("apache/kafka:3.8.0")
         assert svc is not None
         assert svc.id == "kafka"
 
@@ -135,8 +135,8 @@ class TestServiceImagePrefixLookup:
         assert svc is not None
         assert svc.id == "postgres"
 
-    def test_get_service_by_image_for_confluent_kafka(self):
-        svc = get_service_by_image("confluentinc/cp-kafka:7.5.16")
+    def test_get_service_by_image_for_apache_kafka(self):
+        svc = get_service_by_image("apache/kafka:3.8.0")
         assert svc is not None
         assert svc.id == "kafka"
 

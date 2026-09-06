@@ -84,7 +84,7 @@ class TestVerifyServiceDispatchLogic:
         from app.registry.services import ServiceDefinition
         svc = ServiceDefinition(
             id="test", name="test", category="queue",
-            image="confluentinc/cp-kafka", default_port=9092,
+            image="apache/kafka", default_port=9092,
             default_env={}, health_check_type="kafka_api_version"
         )
         assert svc.health_check_type == "kafka_api_version"

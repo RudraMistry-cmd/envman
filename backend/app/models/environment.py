@@ -32,6 +32,7 @@ class ServiceSpec(BaseModel):
     port: Optional[int] = None
     volume: Optional[str] = None  # format: "host_path:container_path"
     env: Optional[Dict[str, str]] = None
+    command: Optional[List[str]] = None  # appended AFTER image in docker run
 
     def validate_name(self) -> bool:
         """Validate service name follows Docker naming conventions."""

@@ -41,4 +41,5 @@ class ServiceDefinition(BaseModel):
     image: str  # Docker image prefix (e.g., "postgres", "redis")
     default_port: Optional[int] = None
     default_env: Dict[str, str] = {}
+    default_command: Optional[List[str]] = None  # appended AFTER image in docker run
     health_check_type: str  # "pg_isready", "redis_ping", "node_version", "tcp_port"

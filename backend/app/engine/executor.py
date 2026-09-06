@@ -231,8 +231,16 @@ async def _start_container(step: Step, network_name: str, env_id: str = None) ->
             # Legacy string format: "POSTGRES_PASSWORD=postgres"
             cmd.extend(["-e", env])
 
-    # Add the image name last
+    # Add the image name, then the startup command (if any).
+    # WHY: images like minio/minio REQUIRE a command (`server /data`);
+    #      without one they print help and exit. Docker syntax is
+    #      `docker run ... IMAGE [COMMAND] [ARGS...]`.
     cmd.append(image)
+    command = step.params.get("command")
+    if command:
+        if isinstance(command, str):
+            command = [command]
+        cmd.extend(command)
 
     result = await run_command(cmd)
 
