@@ -10,15 +10,20 @@ import { RefreshIcon } from '../shared/icons'
 export default function ResultsScreen({ steps, verification, error, duration, onReset }) {
   const hasError = error && !verification
   const allReady = verification?.every(v => v.status === 'ready')
+  // A single failed check anywhere must fail the overall banner - never show
+  // "Environment Ready" while a visible failure sits below it.
+  const failed = hasError || (verification && !allReady)
   const completedSteps = steps.filter(s => s.status === 'done').length
 
   return (
     <div className="animate-screen-enter">
-      {hasError ? (
+      {failed ? (
         <>
           <ErrorHero />
           <h2 className="text-xl font-semibold text-white mb-1 text-center">Setup Failed</h2>
-          <p className="text-sm text-zinc-500 mb-6 text-center">Something went wrong during setup.</p>
+          <p className="text-sm text-zinc-500 mb-6 text-center">
+            {hasError ? 'Something went wrong during setup.' : 'One or more services failed verification.'}
+          </p>
         </>
       ) : (
         <>
@@ -28,7 +33,7 @@ export default function ResultsScreen({ steps, verification, error, duration, on
         </>
       )}
 
-      {hasError && <ErrorBanner error={error} />}
+      {(hasError || error) && <ErrorBanner error={error} />}
 
       <StatsRow
         duration={duration}

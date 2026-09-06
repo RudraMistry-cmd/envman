@@ -52,6 +52,14 @@
 - [x] S3.2.1: ALTER TABLE ADD COLUMN migration (saves were failing, deletes orphaned) | size:S
 - [x] S3.2.2: full-loop proof (persist -> dashboard -> DELETE removes container) | size:S
 
+## M5: Results trust bugs (psql + banner) | status: completed
+### T5.1: Postgres query_execution failure | agent:Worker
+- [x] S5.1.1: reproduced exact commands live - both pass on current code; screenshot root cause was mixed-version backend (registry WITH password + verifier WITHOUT PGPASSWORD), no socket/TCP discrepancy; NO code change needed | size:S
+- [x] S5.1.2: python-web template flow proof - query_execution true, 1 row, truthful connection string | size:S
+### T5.2: False success banner | agent:Worker
+- [x] S5.2.1: ResultsScreen never used allReady - banner Success whenever setup had no error; now failed=hasError||(verification&&!allReady) gates hero+title | size:S
+- [x] S5.2.2: forced-failure proof (stopped redis -> not_running) - banner expression evaluates FAILURE on real failed payload, READY on all-ready, FAILURE on error | size:S
+
 ## M4: One-click templates (mern, python-web only) | status: completed
 (scope: registry-pinned {id,version} prefill only; NO startup ordering; NO new runtimes)
 ### T4.1: Backend templates registry + endpoint | agent:Worker
