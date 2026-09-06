@@ -37,7 +37,7 @@ from app.engine.executor import execute_step
 from app.engine.verifier import verify_environment
 from app.models.environment import EnvironmentConfig
 from app.engine.state import store_environment
-from app.storage.db import delete_environment
+from app.storage.db import delete_environment, save_environment_config
 from app.events.bus import emit
 from app.utils.logger import get_logger
 
@@ -66,6 +66,9 @@ async def run_setup(config: EnvironmentConfig) -> str:
 
         # Persist environment record
         store_environment(env_id, plan.network_name)
+
+        # Persist the setup config JSON for export/import
+        save_environment_config(env_id, config.model_dump_json())
 
         await emit("setup_started", {
             "environment_id": env_id,

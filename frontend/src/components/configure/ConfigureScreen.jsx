@@ -70,6 +70,9 @@ export default function ConfigureScreen({ config, setConfig, onStart, onBack }) 
   const [services, setServices] = useState([])
   const [templates, setTemplates] = useState([])
   const [expandedCategory, setExpandedCategory] = useState(null)
+  const [importText, setImportText] = useState('')
+  const [importOpen, setImportOpen] = useState(false)
+  const [importError, setImportError] = useState('')
 
   useEffect(() => {
     fetch(`${API}/registry/services`)
@@ -101,6 +104,39 @@ export default function ConfigureScreen({ config, setConfig, onStart, onBack }) 
       }
       return next
     })
+  }
+
+  const applyImport = (raw) => {
+    setImportError('')
+    let parsed
+    try {
+      parsed = JSON.parse(raw)
+    } catch (e) {
+      setImportError('Invalid JSON — paste an exported envman JSON file.')
+      return
+    }
+    const list = parsed.services || parsed.spec || []
+    if (!Array.isArray(list) || list.length === 0) {
+      setImportError('No services found in imported JSON.')
+      return
+    }
+    const next = {}
+    for (const s of list) {
+      const image = s.image || ''
+      const prefix = image.split(':')[0]
+      const version = image.indexOf(':') >= 0 ? image.split(':').slice(1).join(':') : (s.version || 'latest')
+      const entry = services.find(r => r.id === s.name) || services.find(r => r.image === prefix)
+      if (entry) {
+        next[entry.id] = version
+      }
+    }
+    if (Object.keys(next).length === 0) {
+      setImportError('No imported services match the registry.')
+      return
+    }
+    setConfig(next)
+    setImportOpen(false)
+    setImportText('')
   }
 
   const handleStart = () => {
@@ -260,12 +296,52 @@ export default function ConfigureScreen({ config, setConfig, onStart, onBack }) 
       </div>
       <p className="text-sm text-zinc-500 mb-5">Choose the services and versions you need.</p>
 
+      <div className="mb-5">
+        <button
+          onClick={() => setImportOpen(!importOpen)}
+          className="text-xs font-medium tracking-widest uppercase text-zinc-500 mb-2 hover:text-zinc-300"
+        >
+          {importOpen ? 'Hide import' : 'Import exported config'}
+        </button>
+        {importOpen && (
+          <div className="rounded-card border border-white/[0.06] bg-white/[0.02] p-3">
+            <textarea
+              value={importText}
+              onChange={(e) => setImportText(e.target.value)}
+              placeholder='Paste exported JSON, e.g. {"services": [{"name": "redis", "image": "redis:7"}]}'
+              rows={4}
+              className="w-full bg-black/30 rounded p-2 text-xs font-mono text-zinc-200 mb-2"
+            />
+            <div className="flex items-center gap-2">
+              <input
+                type="file"
+                accept=".json,application/json"
+                onChange={(e) => {
+                  const f = e.target.files && e.target.files[0]
+                  if (!f) return
+                  const reader = new FileReader()
+                  reader.onload = () => applyImport(reader.result)
+                  reader.readAsText(f)
+                }}
+                className="text-xs text-zinc-500"
+              />
+              <button
+                onClick={() => applyImport(importText)}
+                className="text-xs px-2 py-1 rounded bg-white/5 border border-white/10 text-zinc-300 hover:bg-white/10"
+              >
+                Apply
+              </button>
+            </div>
+            {importError && (<p className="text-xs text-red-400 mt-2">{importError}</p>)}
+          </div>
+        )}
+      </div>
+
       {templates.length > 0 && (
         <div className="mb-5">
           <p className="text-xs font-medium tracking-widest uppercase text-zinc-500 mb-2">
             Start from a template
-          </p>
-          <div className="grid grid-cols-2 gap-3">
+          </p>          <div className="grid grid-cols-2 gap-3">
             {templates.map(t => {
               const names = t.services.map(s => services.find(r => r.id === s.id)?.name || s.id)
               const active = t.services.length > 0 && t.services.every(s => config[s.id] === s.version)

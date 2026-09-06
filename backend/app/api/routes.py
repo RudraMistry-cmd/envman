@@ -30,6 +30,7 @@ from app.storage.db import (
     get_all_environments,
     get_containers,
     get_environment,
+    get_environment_config,
     save_environment,
     delete_environment,
     update_container_status,
@@ -257,4 +258,55 @@ async def setup_env(config: EnvironmentConfig):
     # Run setup in the background (doesn't block the response)
     env_id = await run_setup(config)
 
+    return {"status": "started", "environment_id": env_id}
+
+
+@router.post("/environments/{env_id}/export")
+def export_environment(env_id: str):
+    """Export environment config as JSON.
+
+    Returns the stored setup config for an environment.
+    Useful for saving and re-using environment configurations.
+
+    SECURITY: Unknown environments return 404; no stored config returns 404.
+    """
+    # Verify environment exists
+    env_row = get_environment(env_id)
+    if not env_row:
+        raise HTTPException(status_code=404, detail="environment not found")
+
+    # Retrieve stored config
+    config_json = get_environment_config(env_id)
+    if not config_json:
+        raise HTTPException(status_code=404, detail="no stored config for environment")
+
+    import json
+    config = json.loads(config_json)
+
+    # Transform to export shape: {environment_id, services:[{name,image,port,volume,env,command}]}
+    services = []
+    for svc in config.get("services", []):
+        service = {
+            "name": svc.get("name", ""),
+            "image": svc.get("image", ""),
+            "port": svc.get("port"),
+            "volume": svc.get("volume"),
+            "env": svc.get("env"),
+            "command": svc.get("command"),
+        }
+        services.append(service)
+
+    return {"environment_id": env_id, "services": services}
+
+
+@router.post("/environments/import")
+async def import_environment(config: EnvironmentConfig):
+    """Import environment config and start setup.
+
+    Parses the body as an EnvironmentConfig (validated by Pydantic)
+    and runs the setup pipeline via run_setup.
+
+    Returns the same shape as /setup: {status: "started", environment_id}.
+    """
+    env_id = await run_setup(config)
     return {"status": "started", "environment_id": env_id}

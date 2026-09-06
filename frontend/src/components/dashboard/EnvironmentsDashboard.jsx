@@ -74,6 +74,24 @@ export default function EnvironmentsDashboard({ onNew }) {
     }
   }, [fetchEnvironments])
 
+  const exportEnvironment = useCallback(async (envId) => {
+    try {
+      const res = await fetch(API + '/environments/' + envId + '/export', { method: 'POST' })
+      const data = await res.json()
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'envman-' + envId.slice(0, 8) + '.json'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      console.error('Failed to export environment:', e)
+    }
+  }, [])
+
   if (loading) {
     return (
       <div className="animate-screen-enter">
@@ -190,6 +208,13 @@ export default function EnvironmentsDashboard({ onNew }) {
                 title="Start environment"
               >
                 Start
+              </button>
+              <button
+                onClick={() => exportEnvironment(env.id)}
+                className="p-2 rounded-lg text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+                title="Export environment config"
+              >
+                Export
               </button>
               <button
                 onClick={() => deleteEnvironment(env.id)}

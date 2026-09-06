@@ -72,6 +72,12 @@ def init_db():
     if "connection_string" not in existing:
         cursor.execute("ALTER TABLE containers ADD COLUMN connection_string TEXT")
 
+    # Migrate pre-existing DBs: add config_json column to environments table
+    # if it doesn't already exist (idempotent, same pattern as containers).
+    existing = {row[1] for row in cursor.execute("PRAGMA table_info(environments)").fetchall()}
+    if "config_json" not in existing:
+        cursor.execute("ALTER TABLE environments ADD COLUMN config_json TEXT")
+
     conn.commit()
     conn.close()
     logger.info("database initialized successfully")
@@ -92,6 +98,36 @@ def save_environment(env_id: str, network_name: str):
     )
     conn.commit()
     conn.close()
+
+
+def save_environment_config(env_id: str, config_json: str):
+    """Persist environment config as JSON.
+
+    WHY: We need to persist the setup config so it can be exported/imported
+         without requiring the user to re-specify services/versions.
+    """
+    logger.info("saving environment config for %s", env_id)
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE environments SET config_json = ? WHERE id = ?",
+        (config_json, env_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_environment_config(env_id: str):
+    """Retrieve environment config JSON.
+
+    Returns: config_json string or None if not found
+    """
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT config_json FROM environments WHERE id = ?", (env_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row[0] if row else None
 
 
 def save_container(container_id: str, env_id: str, name: str, image: str, status: str,
