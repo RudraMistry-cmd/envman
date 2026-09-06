@@ -24,6 +24,11 @@ SERVICES = [
         image="node",
         default_port=None,
         default_env={},
+        # Bare `node` launches an interactive REPL that hits EOF and exits
+        # under `docker run -d` (no TTY). tail keeps the runtime alive as an
+        # exec-able dev environment (portable: works on slim/busybox too,
+        # unlike `sleep infinity`).
+        default_command=["tail", "-f", "/dev/null"],
         health_check_type="node_version"
     ),
     ServiceDefinition(
@@ -33,6 +38,8 @@ SERVICES = [
         image="python",
         default_port=None,
         default_env={},
+        # Same REPL-EOF exit as node; same keep-alive treatment.
+        default_command=["tail", "-f", "/dev/null"],
         health_check_type="python_version"
     ),
 

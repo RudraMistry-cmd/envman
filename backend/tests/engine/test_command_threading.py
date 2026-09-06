@@ -32,9 +32,16 @@ class TestServiceSpecCommandField:
     def test_registry_others_have_no_default_command(self):
         from app.registry.services import get_all_services
         for svc in get_all_services():
-            if svc.id in ("minio", "typesense"):
+            if svc.id in ("minio", "typesense", "node", "python"):
                 continue
             assert svc.default_command is None, f"{svc.id} unexpectedly has a command"
+
+    def test_registry_runtimes_have_keepalive_command(self):
+        from app.registry.services import get_service_by_image
+        for image in ("node:20", "python:3.12"):
+            svc = get_service_by_image(image)
+            assert svc is not None
+            assert svc.default_command == ["tail", "-f", "/dev/null"]
 
 
 class TestPlannerThreadsCommand:
@@ -76,8 +83,9 @@ class TestPlannerThreadsCommand:
         monkeypatch.setattr(
             planner, "image_exists", AsyncMock(return_value=True)
         )
+        # postgres has neither an explicit nor a registry command.
         config = EnvironmentConfig(
-            services=[ServiceSpec(name="node", image="node:20")]
+            services=[ServiceSpec(name="postgres", image="postgres:16")]
         )
         plan = await planner.plan_environment(config)
         start = [s for s in plan.steps if s.type == "start_container"][0]

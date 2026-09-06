@@ -101,6 +101,23 @@
 All Ports columns showed real 0.0.0.0:port->port bindings matching the app's
 reported host ports. E2E containers removed afterwards.
 
+## node/python keep-alive (follow-up mission, proven 2026-09-06)
+- Bare node/python images launch a REPL that hits EOF under `docker run -d`
+  and exits, so version checks ran against dead containers.
+- Fix: default_command=["tail", "-f", "/dev/null"] (not sleep infinity:
+  tail exists even on slim/busybox). Proven via REAL /setup flow (not manual
+  docker): envman_node running 18s+, node -v v20.20.2; envman_python running
+  13s+, python3 3.12.14. Both envs deleted afterwards via API.
+
+## containers-table migration (found live 2026-09-06)
+- T1.5 added host_port/connection_string columns to CREATE TABLE + writer,
+  but CREATE TABLE IF NOT EXISTS never migrates the existing 5-col table,
+  so EVERY save_container failed ("no column named host_port", swallowed by
+  try/except) and DELETE orphaned running containers.
+- Fix: PRAGMA-guarded ALTER TABLE ADD COLUMN in init_db (idempotent).
+- Proven: post-migration /setup persisted the row, dashboard listed it,
+  DELETE removed the container.
+
 ## Spot-checks (to be proven by E2E table, not assumed)
 - postgres: starts passwordless with warning only. mongo: no-auth default.
 - redis: no-auth default. rabbitmq: guest/guest local-only, tcp check ok.

@@ -62,6 +62,16 @@ def init_db():
         )
     """)
 
+    # Migrate pre-existing DBs: CREATE TABLE IF NOT EXISTS does NOT add
+    # columns to an old 5-column table, which made every save_container fail
+    # with "no column named host_port" (and silently orphaned containers on
+    # delete). Idempotent: only adds what's missing.
+    existing = {row[1] for row in cursor.execute("PRAGMA table_info(containers)").fetchall()}
+    if "host_port" not in existing:
+        cursor.execute("ALTER TABLE containers ADD COLUMN host_port INTEGER")
+    if "connection_string" not in existing:
+        cursor.execute("ALTER TABLE containers ADD COLUMN connection_string TEXT")
+
     conn.commit()
     conn.close()
     logger.info("database initialized successfully")
