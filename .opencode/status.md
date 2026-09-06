@@ -1,16 +1,20 @@
 # Mission Status
 
 ## Progress
-- .opencode/todo.md: 67/79 ([85]%) — M1-M5 complete; M6 Section 1 VERIFIED [x] (Reviewer); Section 2 in progress
-- Issues: 0 unresolved (rogue-session junk files removed, todo.md restored from git, all template-literal damage repaired)
-- Workers: 1 active (task_bc3094a6 Section 2 lifecycle)
-- Verification Strategy: per-section Reviewer gate (pytest 218+ green, frontend build, live docker evidence) + commit/push per section; final full-system verification at end
+- .opencode/todo.md: 67/83 ([81]%) — M1-M5 complete; M6 Section 1 VERIFIED [x]; Section 2 implemented+pushed, Reviewer verifying
+- Issues: 0 unresolved (rogue-session reverts repaired: routes async/await, test file, template literals; stale double-server resolved by clean restart)
+- Workers: 1 active (task_6d712839 Reviewer Section 2)
+- Verification Strategy: per-section Reviewer gate (pytest 222 green, frontend build, live docker evidence) + commit/push per section; final full-system verification at end
 - Execution Status: running
 
 ## Current Phase
-M6 T6.2 Section 2 — Lifecycle control (Worker active, strict file ownership)
+M6 T6.2 Section 2 — Lifecycle control (Reviewer verifying; COMMITTED b051527, PUSHED)
 
-## Section 1 report (COMMITTED f53e101, PUSHED)
-- Backend GET /environments/{env_id}/containers/{container_name}/logs: list-based `docker logs --tail N`, env-membership validated via get_containers, tail clamped 1-1000, nonzero-rc → available=false, mismatched name → 404 never reaching docker CLI.
-- Frontend: shared LogPanel.jsx (fetch-on-mount, Refresh, "no logs available"), View-logs on ServiceCard (envId App→Results→ServiceCard) + dashboard modal (env.id + c.name).
-- Evidence: endpoint output byte-identical to `docker logs --tail 200 envman_redis` first 6 lines; `evil_inject` name → 404; pytest 218/218; `npm run build` green (57 modules).
+## Section 2 report (COMMITTED b051527, PUSHED)
+- POST /environments/{id}/stop: `docker stop` (never rm), stored status → stopped, per-container results, 404 unknown env.
+- POST /environments/{id}/start: `docker start`, stored status running/stopped by rc, AWAITED verify_environment, 404 unknown env.
+- update_container_status helper in db.py (no schema change needed).
+- 4 new Tier-1 tests (stop-not-rm, start+verifier, 2×404); 222/222 green; build green.
+- Dashboard: Stop/Start buttons + running/stopped badge.
+- Evidence: stop → running-only ps EMPTY + ps -a Exited + dashboard stopped; start → 200 "starting" + redis ready + Up <1s + dashboard running:6379.
+- Note: first start attempt 500 traced to un-awaited verifier coroutine on stale pre-fix server; fixed (async def + await), verified 200 on fresh server.

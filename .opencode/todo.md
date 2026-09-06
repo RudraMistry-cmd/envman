@@ -58,10 +58,10 @@
 - [x] S6.1.1: GET container logs endpoint with env-membership validation | size:M
 - [x] S6.1.2: View-logs UI on ServiceCard + dashboard with refresh, graceful empty | size:M
 - [x] S6.1.3: Tier-1 tests + pytest/build green + live-vs-terminal evidence | size:S
-### T6.2: Section 2 lifecycle control | agent:Worker | depends:T6.1 | status: pending
-- [ ] S6.2.1: POST stop/start env endpoints (docker stop/start, re-verify on start) + status field running/stopped | size:M
-- [ ] S6.2.2: Per-service stop/start if low-cost + dashboard Stop/Start actions reflecting real state | size:M
-- [ ] S6.2.3: Tier-1 tests + pytest green + docker ps stopped-not-removed then running evidence | size:S
+### T6.2: Section 2 lifecycle control | agent:Worker | depends:T6.1 | status: completed
+- [x] S6.2.1: POST stop/start env endpoints (docker stop/start, re-verify on start) + status field running/stopped | size:M
+- [x] S6.2.2: Per-service stop/start if low-cost + dashboard Stop/Start actions reflecting real state | size:M
+- [x] S6.2.3: Tier-1 tests + pytest green + docker ps stopped-not-removed then running evidence | size:S
 ### T6.3: Section 3 config export/import | agent:Worker | depends:T6.2 | status: pending
 - [ ] S6.3.1: POST export env JSON + POST import via existing /setup flow | size:M
 - [ ] S6.3.2: Dashboard Export button + configure-screen Import (paste/upload, pre-fill like template) | size:M
