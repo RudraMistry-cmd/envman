@@ -25,6 +25,7 @@ from fastapi import APIRouter
 from app.engine.coordinator import run_setup
 from app.models.environment import EnvironmentConfig
 from app.registry.services import get_all_services
+from app.registry.templates import get_all_templates
 from app.storage.db import get_all_environments, save_environment, delete_environment
 from app.utils.logger import get_logger
 
@@ -55,6 +56,19 @@ def list_services():
     An API endpoint exposing EnvMan's supported ecosystem.
     """
     return get_all_services()
+
+
+@router.get("/templates")
+def list_templates():
+    """
+    WHY:
+    The frontend template picker needs the pinned {id, version} sets.
+
+    WHAT:
+    Returns the mern + python-web definitions. Every service id here
+    exists in the service registry; versions match the picker options.
+    """
+    return get_all_templates()
 
 
 @router.get("/environments")

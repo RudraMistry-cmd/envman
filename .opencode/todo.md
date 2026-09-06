@@ -51,3 +51,14 @@
 ### T3.2: containers-table migration
 - [x] S3.2.1: ALTER TABLE ADD COLUMN migration (saves were failing, deletes orphaned) | size:S
 - [x] S3.2.2: full-loop proof (persist -> dashboard -> DELETE removes container) | size:S
+
+## M4: One-click templates (mern, python-web only) | status: completed
+(scope: registry-pinned {id,version} prefill only; NO startup ordering; NO new runtimes)
+### T4.1: Backend templates registry + endpoint | agent:Worker
+- [x] S4.1.1: templates.py with mern (node 20, mongo 7, redis 7) + python-web (python 3.12, postgres 16, redis 7) | size:S
+- [x] S4.1.2: GET /templates endpoint | size:S
+### T4.2: Frontend template picker | agent:Worker
+- [x] S4.2.1: template cards pre-filling config state, manual picker untouched | size:M
+### T4.3: Verification | agent:Reviewer | depends:T4.1,T4.2
+- [x] S4.3.1: pytest green + frontend build green | size:S
+- [x] S4.3.2: template payload E2E (same services/ports as manual picks, docker ps) | size:M

@@ -68,12 +68,17 @@ function countSelectedInCategory(svcs, config) {
 
 export default function ConfigureScreen({ config, setConfig, onStart, onBack }) {
   const [services, setServices] = useState([])
+  const [templates, setTemplates] = useState([])
   const [expandedCategory, setExpandedCategory] = useState(null)
 
   useEffect(() => {
     fetch(`${API}/registry/services`)
       .then(res => res.json())
       .then(setServices)
+      .catch(console.error)
+    fetch(`${API}/templates`)
+      .then(res => res.json())
+      .then(setTemplates)
       .catch(console.error)
   }, [])
 
@@ -254,6 +259,50 @@ export default function ConfigureScreen({ config, setConfig, onStart, onBack }) 
         <h2 className="text-xl font-semibold text-white">Configure Your Stack</h2>
       </div>
       <p className="text-sm text-zinc-500 mb-5">Choose the services and versions you need.</p>
+
+      {templates.length > 0 && (
+        <div className="mb-5">
+          <p className="text-xs font-medium tracking-widest uppercase text-zinc-500 mb-2">
+            Start from a template
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            {templates.map(t => {
+              const names = t.services.map(s => services.find(r => r.id === s.id)?.name || s.id)
+              const active = t.services.length > 0 && t.services.every(s => config[s.id] === s.version)
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setConfig(Object.fromEntries(t.services.map(s => [s.id, s.version])))}
+                  className={`
+                    relative flex flex-col items-start text-left
+                    px-4 py-4 rounded-card border transition-all duration-200
+                    cursor-pointer
+                    ${active
+                      ? 'bg-blue-500/10 border-blue-500/30'
+                      : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04] hover:border-white/[0.12]'
+                    }
+                  `}
+                >
+                  <span className={`text-sm font-semibold mb-0.5 ${active ? 'text-white' : 'text-zinc-200'}`}>
+                    {t.name}
+                  </span>
+                  <span className="text-xs text-zinc-500 mb-2">
+                    {t.description}
+                  </span>
+                  <span className="text-[11px] text-zinc-400">
+                    {names.join(' + ')}
+                  </span>
+                  {active && (
+                    <span className="mt-2 text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300">
+                      Selected
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3 mb-5">
         {CATEGORY_ORDER.map(cat => {
