@@ -29,9 +29,12 @@ from app.registry.templates import get_all_templates
 from app.storage.db import (
     get_all_environments,
     get_containers,
+    get_environment,
     save_environment,
     delete_environment,
+    update_container_status,
 )
+from app.engine.verifier import verify_environment
 from app.utils.logger import get_logger
 import subprocess
 
@@ -82,6 +85,115 @@ def list_environments():
     """Return all environments with their service lists and status."""
     environments = get_all_environments()
     return environments
+
+
+@router.post("/environments/{env_id}/stop")
+def stop_environment(env_id: str):
+    """Stop all containers for an environment.
+
+    WHY: Allow user to stop an entire environment (e.g., save resources)
+         without removing containers and their data.
+
+    HOW:
+        1. Get all containers for this environment via get_containers()
+        2. For each container, run `docker stop <name>` (list-based, never shell=True)
+        3. Update stored status to 'stopped' via update_container_status
+        4. Return per-container results
+
+    SECURITY: Unknown environments return 404; docker CLI is never invoked
+              for envs that don't exist.
+    """
+    # Verify environment exists by fetching its containers
+    # Raises exception for unknown envs (degrades gracefully)
+    try:
+        containers = get_containers(env_id)
+    except Exception as e:  # noqa: BLE001 - unknown env degrades gracefully
+        logger.warning("stop failed for unknown env %s: %s", env_id, e)
+        raise HTTPException(status_code=404, detail="environment not found")
+    if not containers:
+        raise HTTPException(status_code=404, detail="environment not found")
+
+    results = []
+    for c in containers:
+        # c = (id, environment_id, name, image, status, host_port, connection_string)
+        container_name = c[2]
+        result = subprocess.run(
+            ["docker", "stop", container_name],
+            capture_output=True, text=True, timeout=30,
+        )
+        # Update stored status to 'stopped'
+        update_container_status(env_id, container_name, "stopped")
+        results.append({
+            "container": container_name,
+            "docker_result": {
+                "stdout": result.stdout.strip(),
+                "stderr": result.stderr.strip(),
+                "code": result.returncode,
+            }
+        })
+
+    return {"environment_id": env_id, "status": "stopped", "results": results}
+
+
+@router.post("/environments/{env_id}/start")
+async def start_environment(env_id: str):
+    """Start all stored containers for an environment and re-run verifier.
+
+    WHY: Allow user to restart an environment that was previously stopped,
+          restoring services and verifying they're ready.
+
+    HOW:
+        1. Get all containers for this environment via get_containers()
+        2. For each container, run `docker start <name>` (list-based, never shell=True)
+        3. Update stored status
+        4. Re-run verifier the same way fresh setup does
+        5. Return verification results
+
+    SECURITY: Unknown environments return 404; docker CLI is never invoked
+              for envs that don't exist.
+    """
+    # Verify environment exists by fetching its containers
+    # Raises exception for unknown envs (degrades gracefully)
+    try:
+        containers = get_containers(env_id)
+    except Exception as e:  # noqa: BLE001 - unknown env degrades gracefully
+        logger.warning("start failed for unknown env %s: %s", env_id, e)
+        raise HTTPException(status_code=404, detail="environment not found")
+    if not containers:
+        raise HTTPException(status_code=404, detail="environment not found")
+
+    results = []
+    for c in containers:
+        # c = (id, environment_id, name, image, status, host_port, connection_string)
+        container_name = c[2]
+        result = subprocess.run(
+            ["docker", "start", container_name],
+            capture_output=True, text=True, timeout=30,
+        )
+        # Update stored status based on docker start result
+        if result.returncode == 0:
+            new_status = "running"
+        else:
+            new_status = "stopped"
+        update_container_status(env_id, container_name, new_status)
+        results.append({
+            "container": container_name,
+            "docker_result": {
+                "stdout": result.stdout.strip(),
+                "stderr": result.stderr.strip(),
+                "code": result.returncode,
+            }
+        })
+
+    # Re-run verifier the same way fresh setup does
+    verification = await verify_environment()
+
+    return {
+        "environment_id": env_id,
+        "status": "starting",
+        "docker_results": results,
+        "verification": verification,
+    }
 
 
 @router.delete("/environments/{env_id}")

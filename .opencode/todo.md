@@ -54,10 +54,10 @@
 
 ## M6: Mega mission - remaining spec work | status: in_progress
 (collab Phase 4 EXCLUDED. Commit+push per section. Suite must stay green.)
-### T6.1: Section 1 log viewing | agent:Worker | status: in_progress
+### T6.1: Section 1 log viewing | agent:Worker | status: completed
 - [x] S6.1.1: GET container logs endpoint with env-membership validation | size:M
 - [x] S6.1.2: View-logs UI on ServiceCard + dashboard with refresh, graceful empty | size:M
-- [ ] S6.1.3: Tier-1 tests + pytest/build green + live-vs-terminal evidence | size:S
+- [x] S6.1.3: Tier-1 tests + pytest/build green + live-vs-terminal evidence | size:S
 ### T6.2: Section 2 lifecycle control | agent:Worker | depends:T6.1 | status: pending
 - [ ] S6.2.1: POST stop/start env endpoints (docker stop/start, re-verify on start) + status field running/stopped | size:M
 - [ ] S6.2.2: Per-service stop/start if low-cost + dashboard Stop/Start actions reflecting real state | size:M

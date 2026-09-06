@@ -239,6 +239,25 @@ def get_all_environments():
     return environments
 
 
+def update_container_status(env_id: str, name: str, status: str):
+    """Update a container's status in storage.
+
+    WHY: We need to track container lifecycle state changes (e.g., stopped/started)
+          so the dashboard reflects real state without re-querying Docker on every render.
+
+    HOW: UPDATE containers SET status = ? WHERE environment_id = ? AND name = ?.
+         Idempotent: safe to call even if status hasn't changed.
+    """
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE containers SET status = ? WHERE environment_id = ? AND name = ?",
+        (status, env_id, name),
+    )
+    conn.commit()
+    conn.close()
+
+
 def delete_environment(env_id: str):
     """Delete an environment: stop/remove containers, remove network, delete DB rows.
 

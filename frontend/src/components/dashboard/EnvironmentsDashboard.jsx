@@ -56,6 +56,24 @@ export default function EnvironmentsDashboard({ onNew }) {
     }
   }, [])
 
+  const stopEnvironment = useCallback(async (envId) => {
+    try {
+      await fetch(`${API}/environments/${envId}/stop`, { method: 'POST' })
+      await fetchEnvironments()
+    } catch (e) {
+      console.error('Failed to stop environment:', e)
+    }
+  }, [fetchEnvironments])
+
+  const startEnvironment = useCallback(async (envId) => {
+    try {
+      await fetch(`${API}/environments/${envId}/start`, { method: 'POST' })
+      await fetchEnvironments()
+    } catch (e) {
+      console.error('Failed to start environment:', e)
+    }
+  }, [fetchEnvironments])
+
   if (loading) {
     return (
       <div className="animate-screen-enter">
@@ -100,6 +118,9 @@ export default function EnvironmentsDashboard({ onNew }) {
                   </span>
                   <span className="text-xs text-zinc-600">
                     {env.network_name}
+                  </span>
+                  <span className={'text-xs px-2 py-0.5 rounded-full ' + (env.containers.length > 0 && env.containers.every(function (c) { return c.status === 'stopped' }) ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-green-500/10 text-green-400 border border-green-500/20')}>
+                    {env.containers.length > 0 && env.containers.every(function (c) { return c.status === 'stopped' }) ? 'stopped' : 'running'}
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-1">
@@ -155,14 +176,30 @@ export default function EnvironmentsDashboard({ onNew }) {
                   )}
                 </div>
               </div>
+              <div className="ml-4 flex items-center gap-1">
+              <button
+                onClick={() => stopEnvironment(env.id)}
+                className="p-2 rounded-lg text-zinc-500 hover:text-amber-400 hover:bg-amber-500/10 transition-colors"
+                title="Stop environment"
+              >
+                Stop
+              </button>
+              <button
+                onClick={() => startEnvironment(env.id)}
+                className="p-2 rounded-lg text-zinc-500 hover:text-green-400 hover:bg-green-500/10 transition-colors"
+                title="Start environment"
+              >
+                Start
+              </button>
               <button
                 onClick={() => deleteEnvironment(env.id)}
                 disabled={deleting === env.id}
-                className="ml-4 p-2 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                className="p-2 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
                 title="Delete environment"
               >
                 <TrashIcon className="w-4 h-4" />
               </button>
+              </div>
             </div>
           ))}
         </div>
