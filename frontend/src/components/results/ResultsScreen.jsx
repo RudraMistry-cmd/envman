@@ -7,7 +7,7 @@ import StepTimeline from './StepTimeline'
 import Button from '../shared/Button'
 import { RefreshIcon } from '../shared/icons'
 
-export default function ResultsScreen({ steps, verification, error, duration, onReset }) {
+export default function ResultsScreen({ steps, verification, error, duration, onReset, environmentId }) {
   const hasError = error && !verification
   const allReady = verification?.every(v => v.status === 'ready')
   // A single failed check anywhere must fail the overall banner - never show
@@ -45,7 +45,7 @@ export default function ResultsScreen({ steps, verification, error, duration, on
         <div className="space-y-3 mb-4">
           <h3 className="text-xs font-medium tracking-widest uppercase text-zinc-500">Verification</h3>
           {verification.map(v => (
-            <ServiceCard key={v.service} service={v} />
+            <ServiceCard key={v.service} service={v} envId={environmentId} />
           ))}
         </div>
       )}

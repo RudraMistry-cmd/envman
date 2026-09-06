@@ -52,6 +52,32 @@
 - [x] S3.2.1: ALTER TABLE ADD COLUMN migration (saves were failing, deletes orphaned) | size:S
 - [x] S3.2.2: full-loop proof (persist -> dashboard -> DELETE removes container) | size:S
 
+## M6: Mega mission - remaining spec work | status: in_progress
+(collab Phase 4 EXCLUDED. Commit+push per section. Suite must stay green.)
+### T6.1: Section 1 log viewing | agent:Worker | status: in_progress
+- [x] S6.1.1: GET container logs endpoint with env-membership validation | size:M
+- [x] S6.1.2: View-logs UI on ServiceCard + dashboard with refresh, graceful empty | size:M
+- [ ] S6.1.3: Tier-1 tests + pytest/build green + live-vs-terminal evidence | size:S
+### T6.2: Section 2 lifecycle control | agent:Worker | depends:T6.1 | status: pending
+- [ ] S6.2.1: POST stop/start env endpoints (docker stop/start, re-verify on start) + status field running/stopped | size:M
+- [ ] S6.2.2: Per-service stop/start if low-cost + dashboard Stop/Start actions reflecting real state | size:M
+- [ ] S6.2.3: Tier-1 tests + pytest green + docker ps stopped-not-removed then running evidence | size:S
+### T6.3: Section 3 config export/import | agent:Worker | depends:T6.2 | status: pending
+- [ ] S6.3.1: POST export env JSON + POST import via existing /setup flow | size:M
+- [ ] S6.3.2: Dashboard Export button + configure-screen Import (paste/upload, pre-fill like template) | size:M
+- [ ] S6.3.3: Export-delete-reimport round-trip evidence, same services/ports/versions | size:S
+### T6.4: Section 4 registry richness ADDITIVE ONLY | agent:Worker | depends:T6.3 | status: pending
+- [ ] S6.4.1: Add optional available_versions, resource_requirements, platform_support to ServiceDefinition, populate all 14 services | size:M
+- [ ] S6.4.2: Existing tests pass UNMODIFIED + GET /registry/services shows new fields | size:S
+### T6.5: Section 5 packaging | agent:Worker | depends:T6.4 | status: pending
+- [ ] S6.5.1: npm build + StaticFiles mount at / after API/WS routers + client-routing check | size:M
+- [ ] S6.5.2: pyproject.toml entry point (envman = app.cli:main) + cli.py (uvicorn.run, browser open, free-port pick) + CORS both modes | size:M
+- [ ] S6.5.3: Clean-checkout evidence: pip install . + envman start opens working tab, full setup-verify E2E, no npm dev | size:L
+### T6.6: Section 6 lower-priority OPTIONAL (runway-dependent, in order) | status: pending
+- [ ] S6.6.1: Smart port auto-reassignment (next free port + report) | size:M
+- [ ] S6.6.2: Snapshots via export/import reuse | size:M
+- [ ] S6.6.3: AI config gen + resource monitoring (only with real time left) | size:L
+
 ## M5: Results trust bugs (psql + banner) | status: completed
 ### T5.1: Postgres query_execution failure | agent:Worker
 - [x] S5.1.1: reproduced exact commands live - both pass on current code; screenshot root cause was mixed-version backend (registry WITH password + verifier WITHOUT PGPASSWORD), no socket/TCP discrepancy; NO code change needed | size:S

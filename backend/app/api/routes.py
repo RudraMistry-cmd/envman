@@ -21,13 +21,19 @@ WHAT:
        - Server sends: step_started, step_done, step_failed, done
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from app.engine.coordinator import run_setup
 from app.models.environment import EnvironmentConfig
 from app.registry.services import get_all_services
 from app.registry.templates import get_all_templates
-from app.storage.db import get_all_environments, save_environment, delete_environment
+from app.storage.db import (
+    get_all_environments,
+    get_containers,
+    save_environment,
+    delete_environment,
+)
 from app.utils.logger import get_logger
+import subprocess
 
 logger = get_logger("routes")
 
@@ -83,6 +89,43 @@ def delete_env(env_id: str):
     """Stop and remove all containers, the network, and DB records for an environment."""
     delete_environment(env_id)
     return {"status": "deleted", "environment_id": env_id}
+
+
+@router.get("/environments/{env_id}/containers/{container_name}/logs")
+def container_logs(env_id: str, container_name: str, tail: int = 200):
+    """Fetch recent logs for one container, fetch-on-demand (no streaming).
+
+    SECURITY: container_name must belong to env_id per the stored records -
+    anything else is rejected with 404 and never reaches the docker CLI.
+    Missing/stopped containers yield available=false, not a raw error.
+    """
+
+    tail = max(1, min(int(tail), 1000))
+    try:
+        allowed = {row[2] for row in get_containers(env_id)}
+    except Exception as e:  # noqa: BLE001 - unknown env degrades gracefully
+        logger.warning("log fetch for unknown env %s: %s", env_id, e)
+        raise HTTPException(status_code=404, detail="environment not found")
+    if container_name not in allowed:
+        raise HTTPException(
+            status_code=404,
+            detail=f"container '{container_name}' not part of environment",
+        )
+    try:
+        result = subprocess.run(
+            ["docker", "logs", "--tail", str(tail), container_name],
+            capture_output=True, text=True, timeout=15,
+        )
+    except Exception as e:  # noqa: BLE001 - docker down/timeout
+        logger.warning("log fetch failed for '%s': %s", container_name, e)
+        return {"container": container_name, "logs": "",
+                "available": False, "detail": "log fetch failed"}
+    output = (result.stdout or "") + (result.stderr or "")
+    if result.returncode != 0:
+        return {"container": container_name, "logs": "",
+                "available": False, "detail": "no logs available"}
+    return {"container": container_name, "logs": output.strip(),
+            "available": True}
 
 
 @router.post("/setup")

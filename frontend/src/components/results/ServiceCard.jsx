@@ -1,13 +1,17 @@
 import { useState, useRef } from 'react'
 import { CheckIcon, XIcon, ChevronIcon } from '../shared/icons'
+import LogPanel from '../shared/LogPanel'
 
-export default function ServiceCard({ service }) {
+export default function ServiceCard({ service, envId }) {
   const [expanded, setExpanded] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [showLogs, setShowLogs] = useState(false)
   const timer = useRef(null)
   const allPassed = service.checks?.every(c => c.passed)
   const hostPort = service.host_port
   const conn = service.connection_string
+  // Container name follows planner convention: envman_<service.name>
+  const containerName = envId ? `envman_${service.service}` : undefined
   const doCopy = async () => {
     if (!conn) return
     try { await navigator.clipboard.writeText(conn) }
@@ -22,7 +26,7 @@ export default function ServiceCard({ service }) {
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-white capitalize">{service.service}</p>
-          {service.version && (<p className="text-xs text-zinc-500 font-mono">v{service.version}</p>)}
+          {service.version && (<p className="text-xs text-zinc-500 font-mono mt-1">v{service.version}</p>)}
           {hostPort ? (<p className="text-xs text-zinc-400 font-mono mt-1">localhost:{hostPort}</p>) : null}
         </div>
         <ChevronIcon className={`w-4 h-4 text-zinc-600 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
@@ -49,6 +53,17 @@ export default function ServiceCard({ service }) {
           </div>
         </div>
       )}
+      {/* Logs toggle button - always visible in the card header area */}
+      <div className="mt-2 flex items-center gap-2">
+        <button
+          onClick={() => setShowLogs(!showLogs)}
+          className="text-sm text-zinc-400 hover:text-zinc-200 transition-colors p-1 rounded hover:bg-white/5 border border-white/10"
+          title={showLogs ? 'Hide logs' : 'View logs'}
+        >
+          {showLogs ? 'Hide logs' : 'View logs'}
+        </button>
+      </div>
+      {showLogs && <LogPanel envId={envId} containerName={containerName} />}
     </div>
   )
 }

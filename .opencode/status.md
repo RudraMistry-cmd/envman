@@ -1,20 +1,11 @@
 # Mission Status
 
 ## Progress
-- Tests: 184/184 passed
+- .opencode/todo.md: 64/76 ([84]%) — M1-M5 complete; M6 T6.1-T6.6 pending
 - Issues: 0 unresolved
-- Execution Status: PASS
+- Workers: 1 active (task_9c38b278 Section 1 log viewing)
+- Verification Strategy: per-section Reviewer gate (pytest 211+ green, frontend build, live docker evidence) + commit/push per section; final full-system verification at end
+- Execution Status: running
 
-## Completed Work
-- Fixed tests/models/test_environment.py (28/28 passed)
-- Fixed tests/registry/test_service_definitions.py (132/132 passed)
-- Fixed tests/engine/test_planner.py (10/10 passed)
-- Fixed tests/engine/test_verifier.py (21/21 passed)
-- tests/storage/test_db.py (3/3 passed, no changes needed)
-
-## Key Fixes Applied
-1. Added pytest-asyncio for async test functions
-2. Mocked image_exists for pull step tests
-3. Fixed Docker naming pattern tests (id vs name)
-4. Fixed legacy format converter test expectations
-5. Fixed dispatch map assertion (was checking VALUES as KEYS)
+## Current Phase
+M6 T6.1 Section 1 — Log viewing (Worker active)

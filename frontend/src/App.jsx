@@ -20,6 +20,7 @@ export default function App() {
   const [error, setError] = useState(null)
   const [duration, setDuration] = useState(null)
   const [connected, setConnected] = useState(false)
+  const [environmentId, setEnvironmentId] = useState(null)
 
   const reset = useCallback(() => {
     setPhase('dashboard')
@@ -29,6 +30,7 @@ export default function App() {
     setError(null)
     setDuration(null)
     setConnected(false)
+    setEnvironmentId(null)
   }, [])
 
   const handleWsMessage = useCallback((msg) => {
@@ -72,6 +74,7 @@ export default function App() {
       case 'done':
         setVerification(msg.data.verification)
         setDuration(msg.data.duration_ms)
+        setEnvironmentId(msg.data.environment_id ?? null)
         setPhase('results')
         break
 
@@ -99,7 +102,7 @@ export default function App() {
     try {
       await connect()
 
-      const res = await fetch(`${API}/setup`, {
+      const res = await fetch(API + '/setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -120,10 +123,10 @@ export default function App() {
   const totalExpected = Object.values(config).filter(Boolean).length * 4
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6">
+    <div className='min-h-screen flex items-center justify-center p-4 sm:p-6'>
       <Background />
 
-      <div className="relative z-10 w-full max-w-xl">
+      <div className='relative z-10 w-full max-w-xl'>
         <Header />
 
         <GlassCard>
@@ -148,6 +151,7 @@ export default function App() {
               error={error}
               duration={duration}
               onReset={reset}
+              environmentId={environmentId}
             />
           )}
         </GlassCard>

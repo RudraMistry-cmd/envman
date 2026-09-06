@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Button from '../shared/Button'
-import { TrashIcon, PlusIcon } from '../shared/icons'
+import { TrashIcon, PlusIcon, RefreshIcon } from '../shared/icons'
+import LogPanel from '../shared/LogPanel'
 
 const API = 'http://localhost:8000'
 
@@ -8,12 +9,13 @@ export default function EnvironmentsDashboard({ onNew }) {
   const [environments, setEnvironments] = useState([])
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(null)
+  const [logsVisible, setLogsVisible] = useState(null) // {containerName, logs, available, detail}
 
   useEffect(() => {
     fetchEnvironments()
   }, [])
 
-  const fetchEnvironments = async () => {
+  const fetchEnvironments = useCallback(async () => {
     try {
       const res = await fetch(`${API}/environments`)
       const data = await res.json()
@@ -23,9 +25,26 @@ export default function EnvironmentsDashboard({ onNew }) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const deleteEnvironment = async (envId) => {
+  const viewContainerLogs = useCallback(async (envId, containerName) => {
+    try {
+      const res = await fetch(`${API}/environments/${envId}/containers/${containerName}/logs`)
+      const data = await res.json()
+      setLogsVisible({ envId, containerName, logs: data.logs || '', available: data.available, detail: data.detail })
+    } catch (e) {
+      console.error('Failed to fetch container logs:', e)
+      setLogsVisible({
+        envId,
+        containerName,
+        logs: '',
+        available: false,
+        detail: 'log fetch failed',
+      })
+    }
+  }, [])
+
+  const deleteEnvironment = useCallback(async (envId) => {
     setDeleting(envId)
     try {
       await fetch(`${API}/environments/${envId}`, { method: 'DELETE' })
@@ -35,7 +54,7 @@ export default function EnvironmentsDashboard({ onNew }) {
     } finally {
       setDeleting(null)
     }
-  }
+  }, [])
 
   if (loading) {
     return (
@@ -116,6 +135,15 @@ export default function EnvironmentsDashboard({ onNew }) {
                         </div>
                       )}
 
+{/* View logs button */}
+                      <button
+                        onClick={() => viewContainerLogs(env.id, c.name)}
+                        className="text-zinc-600 text-xs hover:text-zinc-300 transition-colors p-1 rounded"
+                        title="View logs"
+                      >
+                        Logs
+                      </button>
+
                       {/* Fallback when neither host_port nor connection_string */}
                       {!c.host_port && !c.connection_string && (
                         <span className="text-xs text-zinc-500 ml-2">Docker network only</span>
@@ -137,6 +165,58 @@ export default function EnvironmentsDashboard({ onNew }) {
               </button>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Logs modal/panel */}
+      {logsVisible && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white/[0.03] rounded-xl border border-white/[0.1] p-6 max-w-2xl w-full max-h-[80vh] overflow-hidden">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-white">
+                Logs for {logsVisible.containerName}
+              </h3>
+              <button
+                onClick={() => setLogsVisible(null)}
+                className="text-zinc-400 hover:text-white transition-colors"
+                title="Close"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="mt-4">
+              {logsVisible.available === false ? (
+                <div className="p-4 text-zinc-400 text-center text-sm">
+                  <p>{logsVisible.detail || 'no logs available'}</p>
+                </div>
+              ) : (
+                <div>
+<Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => viewContainerLogs(logsVisible.envId, logsVisible.containerName)}
+                  className="mb-3 flex items-center gap-2"
+                >
+                  <RefreshIcon className="w-3.5 h-3.5" />
+                  Refresh
+                </Button>
+
+                  <div className="h-64 overflow-y-auto whitespace-pre-wrap text-zinc-200 text-xs font-mono">
+                    {logsVisible.logs || '(empty)'}
+                  </div>
+                </div>
+              )}
+
+              {logsVisible.available === false && logsVisible.detail !== 'log fetch failed' && (
+                <div className="mt-4 p-3 text-xs text-green-400">
+                  <p>No logs available for this container.</p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
