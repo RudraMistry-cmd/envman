@@ -7,9 +7,7 @@ import ConfigureScreen from './components/configure/ConfigureScreen'
 import ProgressScreen from './components/progress/ProgressScreen'
 import ResultsScreen from './components/results/ResultsScreen'
 import { useWebSocket } from './hooks/useWebSocket'
-
-const API = 'http://localhost:8000'
-const WS_URL = 'ws://localhost:8000/ws'
+import { API, WS_URL } from './apiConfig'
 
 export default function App() {
   const [phase, setPhase] = useState('dashboard')

@@ -78,6 +78,16 @@ def init_db():
     if "config_json" not in existing:
         cursor.execute("ALTER TABLE environments ADD COLUMN config_json TEXT")
 
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS snapshots (
+            id TEXT PRIMARY KEY,
+            name TEXT,
+            environment_id TEXT,
+            config_json TEXT,
+            created_at TEXT
+        )
+    """)
+
     conn.commit()
     conn.close()
     logger.info("database initialized successfully")
@@ -342,6 +352,79 @@ def delete_environment(env_id: str):
     conn.close()
 
     logger.info("environment %s fully deleted", env_id)
+
+
+def save_snapshot(snapshot_id: str, name: str, env_id: str, config_json: str):
+    """Persist a snapshot record.
+
+    WHY: TECHNICAL_SPEC.md Part 7 §4 requires saving environment snapshots
+         so they can be restored later even after the original environment is deleted.
+    """
+    logger.info("saving snapshot %s ('%s') for env %s", snapshot_id, name, env_id)
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT OR REPLACE INTO snapshots (id, name, environment_id, config_json, created_at) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (snapshot_id, name, env_id, config_json, datetime.now(timezone.utc).isoformat())
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_snapshot(snapshot_id: str):
+    """Retrieve a snapshot by ID."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name, environment_id, config_json, created_at FROM snapshots WHERE id = ?", (snapshot_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return None
+    return {
+        "id": row[0],
+        "name": row[1],
+        "environment_id": row[2],
+        "config_json": row[3],
+        "created_at": row[4],
+    }
+
+
+def get_all_snapshots():
+    """Retrieve all snapshots ordered by created_at DESC."""
+    import json
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name, environment_id, config_json, created_at FROM snapshots ORDER BY created_at DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    snapshots = []
+    for r in rows:
+        services = []
+        try:
+            cfg = json.loads(r[3])
+            services = cfg.get("services", [])
+        except Exception:
+            pass
+        snapshots.append({
+            "id": r[0],
+            "name": r[1],
+            "environment_id": r[2],
+            "created_at": r[4],
+            "services": services,
+        })
+    return snapshots
+
+
+def delete_snapshot(snapshot_id: str) -> bool:
+    """Delete a snapshot by ID."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM snapshots WHERE id = ?", (snapshot_id,))
+    deleted = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return deleted
 
 
 # Initialize database on module import

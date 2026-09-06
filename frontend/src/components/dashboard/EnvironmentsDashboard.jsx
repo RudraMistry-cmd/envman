@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Button from '../shared/Button'
 import { TrashIcon, PlusIcon, RefreshIcon } from '../shared/icons'
 import LogPanel from '../shared/LogPanel'
-
-const API = 'http://localhost:8000'
+import { API } from '../../apiConfig'
 
 export default function EnvironmentsDashboard({ onNew }) {
   const [environments, setEnvironments] = useState([])

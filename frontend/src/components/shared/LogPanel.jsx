@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
-
-const API = 'http://localhost:8000'
+import { API } from '../../apiConfig'
 
 function logsUrl(envId, containerName) {
   return API + '/environments/' + envId + '/containers/' + containerName + '/logs'

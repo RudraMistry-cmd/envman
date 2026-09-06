@@ -21,8 +21,11 @@ WHAT:
        - Server sends: step_started, step_done, step_failed, done
 """
 
+from typing import Optional
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 from app.engine.coordinator import run_setup
+from app.engine.snapshot import snapshot_manager
 from app.models.environment import EnvironmentConfig
 from app.registry.services import get_all_services
 from app.registry.templates import get_all_templates
@@ -122,8 +125,9 @@ def stop_environment(env_id: str):
             ["docker", "stop", container_name],
             capture_output=True, text=True, timeout=30,
         )
-        # Update stored status to 'stopped'
-        update_container_status(env_id, container_name, "stopped")
+        # Update stored status to 'stopped' only if docker stop succeeded
+        if result.returncode == 0:
+            update_container_status(env_id, container_name, "stopped")
         results.append({
             "container": container_name,
             "docker_result": {
@@ -310,3 +314,73 @@ async def import_environment(config: EnvironmentConfig):
     """
     env_id = await run_setup(config)
     return {"status": "started", "environment_id": env_id}
+
+
+class CreateSnapshotRequest(BaseModel):
+    name: Optional[str] = None
+
+
+class CreateSnapshotFromEnvRequest(BaseModel):
+    environment_id: str
+    name: Optional[str] = None
+
+
+@router.post("/environments/{env_id}/snapshots")
+@router.post("/environments/{env_id}/snapshot")
+def create_environment_snapshot(env_id: str, body: Optional[CreateSnapshotRequest] = None):
+    """Create a durable snapshot from an environment.
+
+    Reuses stored export configuration so the environment can be restored later.
+    """
+    name = body.name if body else None
+    try:
+        return snapshot_manager.create_snapshot(env_id, name)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/snapshots")
+def create_snapshot_direct(body: CreateSnapshotFromEnvRequest):
+    """Create a snapshot specifying environment_id in body."""
+    try:
+        return snapshot_manager.create_snapshot(body.environment_id, body.name)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.get("/snapshots")
+def list_snapshots():
+    """List all saved environment snapshots."""
+    return snapshot_manager.list_snapshots()
+
+
+@router.get("/snapshots/{snapshot_id}")
+def get_snapshot(snapshot_id: str):
+    """Retrieve details of a specific snapshot."""
+    snap = snapshot_manager.get_snapshot(snapshot_id)
+    if not snap:
+        raise HTTPException(status_code=404, detail="snapshot not found")
+    return snap
+
+
+@router.post("/snapshots/{snapshot_id}/restore")
+async def restore_snapshot(snapshot_id: str):
+    """Restore an environment from a saved snapshot.
+
+    Reuses the import/run_setup pipeline to launch and verify the environment.
+    """
+    try:
+        new_env_id = await snapshot_manager.restore_snapshot(snapshot_id)
+        return {"status": "started", "environment_id": new_env_id, "snapshot_id": snapshot_id}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.delete("/snapshots/{snapshot_id}")
+def delete_snapshot(snapshot_id: str):
+    """Delete a saved snapshot."""
+    deleted = snapshot_manager.delete_snapshot(snapshot_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="snapshot not found")
+    return {"status": "deleted", "snapshot_id": snapshot_id}
+

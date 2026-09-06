@@ -1,44 +1,44 @@
 # Project Context
 
 ## Environment
-- Language: Python 3.14.5 + Node/React 18 (Vite 5, Tailwind)
-- Backend: FastAPI + uvicorn + pydantic v2, pytest 9.1.1 (211 tests green 2026-09-06)
-- Frontend: Vite dev on :5173, backend on :8000, CORS allows localhost:5173/:3000 + tauri
-- Package Manager: pip (backend/requirements.txt) + npm (frontend/package-lock.json)
-- Docker: 14 real services, all verified booting with real health checks
+- Python 3.14.5 + React 18/Vite 5/Tailwind; FastAPI backend (:8000), Vite dev (:5173)
+- Backend tests: `cd backend; python -m pytest tests/ -q` (227 green as of 2026-09-06)
+- Frontend build: `npm run build` in frontend/ (green)
+- Docker: 14 real services verified booting with real health checks
+- GitHub: RudraMistry-cmd/envman, branch main (push per section — ground rule)
 
 ## Project Type
-- [x] Application (local dev-environment orchestrator: plan → execute → verify)
-- Backend API (FastAPI) + React dashboard + WebSocket progress bus
-
-## Infrastructure
-- Container: Docker CLI via list-based subprocess (never shell=True)
-- CI/CD: none detected
-- Cloud: none (local-only)
+- Local dev-environment orchestrator (plan → execute → verify), FastAPI + React + WS bus
 
 ## Structure
-- Source: backend/app (api/routes.py, api/ws.py, engine/planner|executor|verifier|coordinator|state.py, registry/schema|services|templates.py, storage/db.py SQLite, events/bus.py, models/environment|plan|step.py)
-- Tests: backend/tests (engine, models, registry, storage) — `cd backend; python -m pytest tests/ -q`
-- Frontend: frontend/src (App.jsx, components/configure|dashboard|progress|results|layout|shared, hooks/useWebSocket.js) — `npm run build` / `npm run dev`
-- Entry: backend/app/main.py (FastAPI app); frontend/frontend/src/main.jsx
+- backend/app: api/routes.py, api/ws.py, engine/planner|executor|verifier|coordinator|state.py, registry/schema|services|templates.py, storage/db.py (SQLite), events/bus.py, models/
+- backend/tests: engine|models|registry|storage|api (test_logs, test_lifecycle, test_export_import)
+- frontend/src: App.jsx, components/configure|dashboard|progress|results|layout|shared (LogPanel.jsx), hooks/
+- .opencode/todo.md: hierarchical M1-M6 plan; Reviewer alone marks [x]
 
-## Conventions (OBSERVED — follow these)
-- Backend: snake_case, absolute imports (from app.xxx), list-based subprocess, module docstring WHY/WHAT/HOW, guarded idempotent SQLite migrations (ALTER TABLE ADD COLUMN only if missing — see db.py init_db)
-- Verifier truthfulness: NEVER present registry default_port as verified; host_port only from stored value or live `docker inspect` HostPort; build_connection_info reports honestly (see verifier.py + db.py _inspect_host_port docstrings)
-- Coordinator: run_setup plans → executes → verifies → emits WS events; on step failure tears down via delete_environment
-- Frontend: dark glass-card UI, API const 'http://localhost:8000', copy-to-clipboard with fallback, results banner fails if ANY service not ready (see ResultsScreen.jsx `failed` gating)
-- Tests: pytest tiered (pure logic fast + real-Docker); suite must stay 211+ green after every section
+## Conventions (follow)
+- List-based subprocess only, never shell=True; guarded idempotent SQLite migrations (PRAGMA check + ADD COLUMN)
+- Verifier truthfulness: host_port only from stored value or live docker inspect, never registry default
+- Results banner fails if ANY service not ready; 211→227 suite must stay green after every section
+- Frontend plain JS in .jsx (no TS annotations, no Python literals); string concat preferred (a past incident stripped `${}` template literals repo-wide)
 
-## Load-bearing (DO NOT REGRESS)
-- executor.py safety pattern (list-based, no shell=True), port-conflict fail-clearly, command-after-image threading
-- verifier.py get_actual_host_port + build_connection_info truthfulness
-- ResultsScreen banner aggregation (failed = hasError || !allReady)
-- 14-service registry boot fixes (postgres PASSWORD, mysql ALLOW_EMPTY, apache/kafka, ES single-node, minio creds+command, couchdb creds, typesense --data-dir + tcp checks, node/python tail keep-alive)
-- templates.py mern + python-web (registry-pinned {id,version} only)
-- db.py containers host_port/connection_string migration pattern
+## Load-bearing (do NOT regress)
+- executor safety/port-conflict/command-after-image; verifier.py truthfulness; ResultsScreen banner gating; 14-service boot fixes; mern/python-web templates; db.py migration pattern
 
-## Current State (2026-09-06)
-- Uncommitted work: backend/app/api/routes.py has container-logs endpoint (fetch-on-demand, env-membership validated) NOT yet committed/tested/wired to UI
-- Empty (0 bytes): events/schemas.py, core/config.py, core/platform.py, engine/compatibility.py
-- Missing: lifecycle stop/start/restart, per-service control, export/import, log UI, registry richness fields, packaging (no pyproject.toml, no cli.py), smart ports, snapshots, AI gen, monitoring
-- Phase 4 Collaboration explicitly OUT OF SCOPE
+## Current Status (2026-09-06 ~17:00)
+- M1-M5: complete [x]. M6 Section 1 logs [x] (commit f53e101). Section 2 lifecycle [x] (b051527 + 879c159).
+- Section 3 export/import: IMPLEMENTED + PUSHED (6415356 test commit, e964a47 feat commit). Evidence: old env→404 no-config; fresh redis export→delete→import→identical redis:7:6379 running. Reviewer task_4e729319 verifying (was RUNNING, ~13+ min); S6.3.1-3 still [ ].
+- Section 4 registry richness: Worker task_79a82556 RUNNING (strict ownership: schema.py + services.py + NEW test_registry_richness.py only). Do NOT commit S4 until S3 marked.
+- Suite 227/227 green; build green. Live backend server: restarted multiple times (kill stale double --reload servers first; run WITHOUT --reload for deterministic evidence). Test envs have churned (deterministic envman_redis names collide across envs).
+
+## Pending Tasks
+- T6.3 S6.3.1-3: await Reviewer mark → commit status/todo churn → push
+- T6.4 S6.4.1-2: collect Worker result → verify gates → live serialization evidence → commit+push → Reviewer
+- T6.5 packaging (pyproject + cli.py + StaticFiles) → T6.6 optional (smart ports, snapshots, AI/monitoring)
+- Final: full-system Reviewer pass, all [x], conclude
+
+## Active sessions/agents (may still be writing files — verify with git status/diff before trusting working tree)
+- task_4e729319 Reviewer (S3 verify), task_79a82556 Worker (S4), ses_f89893120ffeuDSlJKV0gWFXL4 (S4 resume)
+- Older completed: task_9c38b278/60742a93/ccd1c6e6/7885cb8e/300994b6 (S1 workers), task_b1ceeed3/87a87efe/af61d648/9e978283/b3f4b4f0 (S1 reviewers), task_bc3094a6/c249e26c/b7be559d (S2/S3 workers), task_72506199/6d81bc40/6d712839/2184f619/4e729319 (reviewers)
+- WARNING: a competing/runaway session has repeatedly reverted working-tree files (routes async fix, test files, template literals) and drops junk (frontend/con, *.temp, pytest_output*.txt, backend/.opencode/). Counter: verify via git status/diff, repair, run gates, commit IMMEDIATELY to anchor known-good state in git.
+- Backend server mgmt: Get-NetTCPConnection -LocalPort 8000 → kill orphans; start `venv\Scripts\python.exe -m uvicorn app.main:app --port 8000` via run_background (no --reload).

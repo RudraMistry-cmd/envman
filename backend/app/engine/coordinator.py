@@ -124,11 +124,16 @@ async def run_setup(config: EnvironmentConfig) -> str:
 
             # Step succeeded
             logger.info("step '%s' completed", step.id)
+            done_message = f"Completed: {step.id}"
+            if result.get("reassigned_port"):
+                done_message += f" (port reassigned from {result['original_port']} to {result['reassigned_port']})"
             await emit("step_done", {
                 "step": step.id,
                 "step_index": idx,
                 "total_steps": total_steps,
-                "message": f"Completed: {step.id}",
+                "message": done_message,
+                "reassigned_port": result.get("reassigned_port"),
+                "original_port": result.get("original_port"),
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             })
 

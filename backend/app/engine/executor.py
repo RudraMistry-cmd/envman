@@ -35,6 +35,7 @@ import subprocess
 from typing import Dict, Any, List
 from app.models.step import Step
 from app.engine.state import store_container
+from app.engine.port_allocator import port_allocator, NoPortAvailableError
 from app.utils.logger import get_logger
 
 logger = get_logger("executor")
@@ -190,77 +191,130 @@ async def _start_container(step: Step, network_name: str, env_id: str = None) ->
     logger.info("cleaning up old container '%s' if exists", name)
     await run_command(["docker", "rm", "-f", name])
 
-    # Build command as a LIST (never as a string!)
-    cmd: List[str] = ["docker", "run", "-d", "--name", name]
-
-    # FIX #5: Network attachment
-    cmd.extend(["--network", network_name])
-
-    # Port mapping (if specified)
-    port = step.params.get("port")
-    if port:
-        cmd.extend(["-p", port])
-
-    # Extract host port from param (for docker error normalization)
+    # Extract host port and container port from param
     raw_port = step.params.get("port")
     host_port = None
-    if raw_port:
+    container_port = None
+    if raw_port is not None:
         if ":" in str(raw_port):
+            parts = str(raw_port).split(":")
             try:
-                host_port = int(str(raw_port).split(":")[0])
+                host_port = int(parts[0])
+                container_port = int(parts[1]) if len(parts) > 1 else host_port
             except ValueError:
-                host_port = None
+                pass
         else:
             try:
                 host_port = int(raw_port)
+                container_port = host_port
             except ValueError:
-                host_port = None
+                pass
 
-    # Volume mounting (if specified)
-    volume = step.params.get("volume")
-    if volume:
-        cmd.extend(["-v", volume])
+    original_host_port = host_port
+    assigned_host_port = host_port
+    reassigned = False
 
-    # Environment variables (convert dict to multiple -e flags)
-    env = step.params.get("env")
-    if env:
-        if isinstance(env, dict):
-            for key, value in env.items():
-                cmd.extend(["-e", f"{key}={value}"])
+    # Proactive conflict check & allocation (TECHNICAL_SPEC.md Part 7 §3)
+    if host_port is not None:
+        if not port_allocator.is_available(host_port):
+            try:
+                assigned_host_port = port_allocator.allocate(name, preferred_port=host_port)
+                reassigned = (assigned_host_port != original_host_port)
+                if reassigned:
+                    logger.info(
+                        "Host port %d is in use; reassigning container '%s' to port %d",
+                        original_host_port, name, assigned_host_port,
+                    )
+            except NoPortAvailableError as e:
+                logger.error("No free port available for '%s': %s", name, e)
+                normalized = f"Host port {host_port} is already in use and no available port was found - cannot start container '{name}'."
+                return {"stdout": "", "stderr": normalized, "code": 1}
         else:
-            # Legacy string format: "POSTGRES_PASSWORD=postgres"
-            cmd.extend(["-e", env])
+            port_allocator.allocated[host_port] = name
 
-    # Add the image name, then the startup command (if any).
-    # WHY: images like minio/minio REQUIRE a command (`server /data`);
-    #      without one they print help and exit. Docker syntax is
-    #      `docker run ... IMAGE [COMMAND] [ARGS...]`.
-    cmd.append(image)
-    command = step.params.get("command")
-    if command:
-        if isinstance(command, str):
-            command = [command]
-        cmd.extend(command)
+    def _build_cmd(curr_host_port: Optional[int]) -> List[str]:
+        cmd: List[str] = ["docker", "run", "-d", "--name", name, "--network", network_name]
+        if curr_host_port is not None and container_port is not None:
+            cmd.extend(["-p", f"{curr_host_port}:{container_port}"])
+        elif raw_port:
+            cmd.extend(["-p", str(raw_port)])
 
-    result = await run_command(cmd)
+        volume = step.params.get("volume")
+        if volume:
+            cmd.extend(["-v", volume])
 
-    # Normalize docker error messages about port conflicts
-    if result["code"] != 0:
-        stderr_lower = result["stderr"].lower()
-        # Check for Docker's own port conflict messages and normalize
-        if "port is already allocated" in stderr_lower or "bind for" in stderr_lower:
-            # Try to extract the port number from the raw port param
-            if host_port:
-                normalized = f"Host port {host_port} is already in use - cannot start container '{name}'. Stop the conflicting service or choose a different port."
+        env = step.params.get("env")
+        if env:
+            if isinstance(env, dict):
+                for key, value in env.items():
+                    cmd.extend(["-e", f"{key}={value}"])
             else:
-                normalized = f"Host port is already in use - cannot start container '{name}'. Stop the conflicting service or choose a different port."
+                cmd.extend(["-e", env])
+
+        cmd.append(image)
+        command = step.params.get("command")
+        if command:
+            if isinstance(command, str):
+                command = [command]
+            cmd.extend(command)
+        return cmd
+
+    max_retries = 5
+    attempts = 0
+    result: Dict[str, Any] = {"stdout": "", "stderr": "", "code": -1}
+
+    while attempts <= max_retries:
+        cmd = _build_cmd(assigned_host_port)
+        result = await run_command(cmd)
+        if result["code"] == 0:
+            break
+
+        stderr_lower = result["stderr"].lower()
+        is_port_conflict = (
+            "port is already allocated" in stderr_lower
+            or "bind for" in stderr_lower
+            or "address already in use" in stderr_lower
+        )
+
+        if is_port_conflict and assigned_host_port is not None and attempts < max_retries:
+            attempts += 1
+            port_allocator.release(assigned_host_port)
+            try:
+                next_port = port_allocator.allocate(name, preferred_port=assigned_host_port + 1)
+            except NoPortAvailableError:
+                break
+            logger.warning(
+                "Docker reported port %d in use for '%s'; retrying with next free port %d (attempt %d/%d)",
+                assigned_host_port, name, next_port, attempts, max_retries,
+            )
+            assigned_host_port = next_port
+            reassigned = True
+            await run_command(["docker", "rm", "-f", name])
+            continue
+
+        # If not port conflict or exceeded max retries:
+        if is_port_conflict:
+            port_to_report = assigned_host_port or host_port
+            normalized = f"Host port {port_to_report} is already in use - cannot start container '{name}'. Stop the conflicting service or choose a different port."
             logger.error(normalized)
             return {"stdout": "", "stderr": normalized, "code": 1}
+        break
 
     if result["code"] == 0:
         container_id = result["stdout"]
         store_container(step.id, container_id, env_id=env_id, name=name, image=image)
-        logger.info("container '%s' started successfully", name)
+        if reassigned:
+            step.params["port"] = f"{assigned_host_port}:{container_port}"
+            step.params["reassigned_port"] = assigned_host_port
+            step.params["original_port"] = original_host_port
+            result["reassigned_port"] = assigned_host_port
+            result["original_port"] = original_host_port
+            result["reassignment_message"] = (
+                f"Port {original_host_port} was in use; reassigned container '{name}' to port {assigned_host_port}"
+            )
+            logger.info("container '%s' started successfully on reassigned port %d", name, assigned_host_port)
+        else:
+            logger.info("container '%s' started successfully", name)
     else:
         logger.error("failed to start container '%s': %s", name, result["stderr"])
 

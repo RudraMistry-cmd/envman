@@ -1,0 +1,40 @@
+{
+  "documents": {
+    "hub_docker_com___mysql.md": {
+      "url": "https://hub.docker.com/_/mysql",
+      "title": "mysql - Official Image | Docker Hub",
+      "fetchedAt": "2026-09-06T08:00:59.045Z",
+      "expiresAt": "2026-09-07T08:00:59.045Z",
+      "size": 15146
+    },
+    "www_elastic_co_guide_en_elasticsearch_reference_current_dockerhtm.md": {
+      "url": "https://www.elastic.co/guide/en/elasticsearch/reference/current/docker.html",
+      "title": "Install Elasticsearch with Docker | Elastic Docs",
+      "fetchedAt": "2026-09-06T08:00:59.873Z",
+      "expiresAt": "2026-09-07T08:00:59.873Z",
+      "size": 1560
+    },
+    "www_elastic_co_docs_deploy-manage_deploy_self-managed_install-ela.md": {
+      "url": "https://www.elastic.co/docs/deploy-manage/deploy/self-managed/install-elasticsearch-docker-basic",
+      "title": "Start a single-node cluster in Docker | Elastic Docs",
+      "fetchedAt": "2026-09-06T08:01:05.731Z",
+      "expiresAt": "2026-09-07T08:01:05.731Z",
+      "size": 10530
+    },
+    "hub_docker_com_r_apache_kafka.md": {
+      "url": "https://hub.docker.com/r/apache/kafka",
+      "title": "apache/kafka - Docker Image",
+      "fetchedAt": "2026-09-06T08:01:05.878Z",
+      "expiresAt": "2026-09-07T08:01:05.878Z",
+      "size": 15145
+    },
+    "hub_docker_com_r_minio_minio.md": {
+      "url": "https://hub.docker.com/r/minio/minio",
+      "title": "minio/minio - Docker Image",
+      "fetchedAt": "2026-09-06T08:01:17.771Z",
+      "expiresAt": "2026-09-07T08:01:17.771Z",
+      "size": 15143
+    }
+  },
+  "lastUpdated": "2026-09-06T08:01:17.821Z"
+}

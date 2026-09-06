@@ -3,8 +3,7 @@ import CategoryIcon from './CategoryIcon'
 import VersionGrid from './VersionGrid'
 import Button from '../shared/Button'
 import { PlayIcon, ChevronIcon, CheckIcon } from '../shared/icons'
-
-const API = 'http://localhost:8000'
+import { API } from '../../apiConfig'
 
 const VERSION_OPTIONS = {
   node: [

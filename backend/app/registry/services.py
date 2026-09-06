@@ -29,7 +29,10 @@ SERVICES = [
         # exec-able dev environment (portable: works on slim/busybox too,
         # unlike `sleep infinity`).
         default_command=["tail", "-f", "/dev/null"],
-        health_check_type="node_version"
+        health_check_type="node_version",
+        available_versions=["18", "20", "22"],
+        resource_requirements={"memory": "256Mi", "cpu": "0.25"},
+        platform_support={"linux": True, "macos": True, "windows": True},
     ),
     ServiceDefinition(
         id="python",
@@ -40,7 +43,10 @@ SERVICES = [
         default_env={},
         # Same REPL-EOF exit as node; same keep-alive treatment.
         default_command=["tail", "-f", "/dev/null"],
-        health_check_type="python_version"
+        health_check_type="python_version",
+        available_versions=["3.10", "3.11", "3.12", "3.13"],
+        resource_requirements={"memory": "256Mi", "cpu": "0.25"},
+        platform_support={"linux": True, "macos": True, "windows": True},
     ),
 
     # ===== DATABASES =====
@@ -54,7 +60,10 @@ SERVICES = [
         # (proven 2026-09-06: "must specify POSTGRES_PASSWORD"). Matches the
         # postgres://postgres:postgres@... string the app already shows.
         default_env={"POSTGRES_PASSWORD": "postgres"},
-        health_check_type="pg_isready"
+        health_check_type="pg_isready",
+        available_versions=["14", "15", "16", "17"],
+        resource_requirements={"memory": "256Mi", "cpu": "0.25"},
+        platform_support={"linux": True, "macos": True, "windows": True},
     ),
     ServiceDefinition(
         id="mysql",
@@ -65,7 +74,10 @@ SERVICES = [
         # Official image REFUSES to boot without one of these; empty root
         # password matches the app's mysql://root@localhost:PORT/ string.
         default_env={"MYSQL_ALLOW_EMPTY_PASSWORD": "yes"},
-        health_check_type="tcp_port"
+        health_check_type="tcp_port",
+        available_versions=["8.0", "8.4"],
+        resource_requirements={"memory": "512Mi", "cpu": "0.5"},
+        platform_support={"linux": True, "macos": True, "windows": True},
     ),
     ServiceDefinition(
         id="mongo",
@@ -74,7 +86,10 @@ SERVICES = [
         image="mongo",
         default_port=27017,
         default_env={},
-        health_check_type="mongo_ping"
+        health_check_type="mongo_ping",
+        available_versions=["6", "7"],
+        resource_requirements={"memory": "256Mi", "cpu": "0.25"},
+        platform_support={"linux": True, "macos": True, "windows": True},
     ),
     ServiceDefinition(
         id="couchdb",
@@ -88,7 +103,10 @@ SERVICES = [
             "COUCHDB_USER": "admin",
             "COUCHDB_PASSWORD": "admin",
         },
-        health_check_type="http_get"
+        health_check_type="http_get",
+        available_versions=["3"],
+        resource_requirements={"memory": "256Mi", "cpu": "0.25"},
+        platform_support={"linux": True, "macos": True, "windows": True},
     ),
 
     # ===== CACHES =====
@@ -99,7 +117,10 @@ SERVICES = [
         image="redis",
         default_port=6379,
         default_env={},
-        health_check_type="redis_ping"
+        health_check_type="redis_ping",
+        available_versions=["6", "7"],
+        resource_requirements={"memory": "128Mi", "cpu": "0.1"},
+        platform_support={"linux": True, "macos": True, "windows": True},
     ),
 
     # ===== MESSAGE QUEUES =====
@@ -110,7 +131,10 @@ SERVICES = [
         image="rabbitmq",
         default_port=5672,
         default_env={},
-        health_check_type="tcp_port"
+        health_check_type="tcp_port",
+        available_versions=["3.12", "3.13"],
+        resource_requirements={"memory": "256Mi", "cpu": "0.25"},
+        platform_support={"linux": True, "macos": True, "windows": True},
     ),
     ServiceDefinition(
         id="kafka",
@@ -122,7 +146,10 @@ SERVICES = [
         image="apache/kafka",
         default_port=9092,
         default_env={},
-        health_check_type="kafka_api_version"
+        health_check_type="kafka_api_version",
+        available_versions=["3.8.0"],
+        resource_requirements={"memory": "512Mi", "cpu": "0.5"},
+        platform_support={"linux": True, "macos": True, "windows": True},
     ),
     ServiceDefinition(
         id="nats",
@@ -133,7 +160,10 @@ SERVICES = [
         default_env={},
         # nats image has no curl (code 127) so the in-container http check
         # cannot run; TCP-open on the client port is the honest check.
-        health_check_type="tcp_port"
+        health_check_type="tcp_port",
+        available_versions=["2.9", "2.10"],
+        resource_requirements={"memory": "128Mi", "cpu": "0.1"},
+        platform_support={"linux": True, "macos": True, "windows": True},
     ),
 
     # ===== SEARCH =====
@@ -149,7 +179,10 @@ SERVICES = [
             "discovery.type": "single-node",
             "xpack.security.enabled": "false",
         },
-        health_check_type="http_get"
+        health_check_type="http_get",
+        available_versions=["8.13.0", "8.14.0"],
+        resource_requirements={"memory": "1Gi", "cpu": "1.0"},
+        platform_support={"linux": True, "macos": True, "windows": True},
     ),
     ServiceDefinition(
         id="meilisearch",
@@ -158,7 +191,10 @@ SERVICES = [
         image="getmeili/meilisearch",
         default_port=7700,
         default_env={},
-        health_check_type="http_get"
+        health_check_type="http_get",
+        available_versions=["v1.7", "v1.8"],
+        resource_requirements={"memory": "256Mi", "cpu": "0.25"},
+        platform_support={"linux": True, "macos": True, "windows": True},
     ),
     ServiceDefinition(
         id="typesense",
@@ -171,7 +207,10 @@ SERVICES = [
         # keyed http check can't run in-container: tcp_port on 8108 instead.
         default_env={"TYPESENSE_API_KEY": "xyz"},
         default_command=["--data-dir", "/tmp"],
-        health_check_type="tcp_port"
+        health_check_type="tcp_port",
+        available_versions=["27.1"],
+        resource_requirements={"memory": "256Mi", "cpu": "0.25"},
+        platform_support={"linux": True, "macos": True, "windows": True},
     ),
 
     # ===== STORAGE =====
@@ -188,7 +227,10 @@ SERVICES = [
         },
         # REQUIRED: image prints help and exits without a server command.
         default_command=["server", "/data", "--console-address", ":9001"],
-        health_check_type="http_get"
+        health_check_type="http_get",
+        available_versions=["latest"],
+        resource_requirements={"memory": "256Mi", "cpu": "0.25"},
+        platform_support={"linux": True, "macos": True, "windows": True},
     ),
 ]
 

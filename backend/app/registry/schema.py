@@ -43,3 +43,13 @@ class ServiceDefinition(BaseModel):
     default_env: Dict[str, str] = {}
     default_command: Optional[List[str]] = None  # appended AFTER image in docker run
     health_check_type: str  # "pg_isready", "redis_ping", "node_version", "tcp_port"
+    available_versions: List[str] = []
+    resource_requirements: Dict[str, str] = {
+        "memory": "256Mi",
+        "cpu": "0.25",
+    }
+    platform_support: Dict[str, bool] = {
+        "linux": True,
+        "macos": True,
+        "windows": True,
+    }

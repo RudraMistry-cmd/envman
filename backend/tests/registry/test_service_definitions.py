@@ -37,6 +37,27 @@ class TestServiceDefinitionHasRequiredFields:
     def test_has_health_check_type(self, svc):
         assert svc.health_check_type is not None and isinstance(svc.health_check_type, str)
 
+    @pytest.mark.parametrize("svc", SERVICES)
+    def test_has_available_versions(self, svc):
+        assert isinstance(svc.available_versions, list)
+        assert len(svc.available_versions) > 0
+        assert all(isinstance(v, str) and v for v in svc.available_versions)
+
+    @pytest.mark.parametrize("svc", SERVICES)
+    def test_has_resource_requirements(self, svc):
+        assert isinstance(svc.resource_requirements, dict)
+        assert "memory" in svc.resource_requirements
+        assert "cpu" in svc.resource_requirements
+        assert isinstance(svc.resource_requirements["memory"], str)
+        assert isinstance(svc.resource_requirements["cpu"], str)
+
+    @pytest.mark.parametrize("svc", SERVICES)
+    def test_has_platform_support(self, svc):
+        assert isinstance(svc.platform_support, dict)
+        assert "linux" in svc.platform_support and isinstance(svc.platform_support["linux"], bool)
+        assert "macos" in svc.platform_support and isinstance(svc.platform_support["macos"], bool)
+        assert "windows" in svc.platform_support and isinstance(svc.platform_support["windows"], bool)
+
 
 class TestNoDuplicateIds:
     """Ensure no two ServiceDefinition entries share the same id."""

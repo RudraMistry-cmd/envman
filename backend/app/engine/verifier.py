@@ -109,17 +109,29 @@ async def _pg_run_query(name: str) -> Dict[str, Any]:
     WHY: pg_isready says "I'm listening."
      But can we actually RUN a query?
      This is the REAL test of whether Postgres works.
+     Retries to account for postgres daemon restart during init.
     """
-    # PGPASSWORD matches the registry default_env (POSTGRES_PASSWORD=postgres);
-    # without it psql fails with password auth now that a password is set.
-    result = await run_command([
-        "docker", "exec", "-e", "PGPASSWORD=postgres", name,
-        "psql", "-U", "postgres", "-c", "SELECT 1 AS connected;"
-    ])
+    last_result: Dict[str, Any] = {"code": 1, "stdout": "", "stderr": ""}
+    for attempt in range(1, PG_RETRY_COUNT + 1):
+        result = await run_command([
+            "docker", "exec", "-e", "PGPASSWORD=postgres", name,
+            "psql", "-U", "postgres", "-c", "SELECT 1 AS connected;"
+        ])
+        last_result = result
+        if result["code"] == 0:
+            return {
+                "success": True,
+                "output": result["stdout"],
+                "error": None,
+            }
+        if attempt < PG_RETRY_COUNT:
+            logger.info("postgres query attempt %d/%d not ready yet, retrying...", attempt, PG_RETRY_COUNT)
+            await asyncio.sleep(PG_RETRY_DELAY)
+
     return {
-        "success": result["code"] == 0,
-        "output": result["stdout"],
-        "error": result["stderr"] if result["code"] != 0 else None,
+        "success": False,
+        "output": last_result["stdout"],
+        "error": last_result["stderr"],
     }
 
 
