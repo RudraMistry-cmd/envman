@@ -146,3 +146,49 @@ class TestExecutorPortReassignment:
         assert done["reassigned_port"] == 5433
         assert done["original_port"] == 5432
         assert "port reassigned from 5432 to 5433" in done["message"]
+
+    def test_executor_type_annotations_resolve(self):
+        """Ensure all type annotations in executor module resolve without NameError.
+
+        This test directly catches missing typing imports (such as Optional)
+        even in Python versions where deferred annotation evaluation is enabled.
+        """
+        import typing
+        hints = typing.get_type_hints(executor.build_docker_run_cmd)
+        assert "host_port" in hints
+        assert "container_port" in hints
+        assert "return" in hints
+
+    @pytest.mark.asyncio
+    async def test_start_container_with_real_port_allocator_integration(self, monkeypatch):
+        """Test _start_container calling real port_allocator and build_docker_run_cmd without mocking them."""
+        commands_run = []
+
+        async def mock_run_command(cmd, timeout=300):
+            commands_run.append(list(cmd))
+            return {"stdout": "mock_real_cid_123", "stderr": "", "code": 0}
+
+        monkeypatch.setattr(executor, "run_command", mock_run_command)
+
+        # Clear allocator state, do NOT mock port_allocator methods
+        executor.port_allocator.allocated.clear()
+
+        step = Step(
+            id="start_node",
+            type="start_container",
+            params={
+                "name": "envman_node",
+                "image": "node:20",
+                "port": "3000:3000",
+            },
+        )
+
+        result = await executor._start_container(step, network_name="envman_net_test", env_id="env_test")
+        assert result["code"] == 0
+        assert result["stdout"] == "mock_real_cid_123"
+        # Verify docker run command was constructed properly
+        run_cmd = [c for c in commands_run if "run" in c][0]
+        assert "envman_node" in run_cmd
+        assert "envman_net_test" in run_cmd
+        assert "node:20" in run_cmd
+

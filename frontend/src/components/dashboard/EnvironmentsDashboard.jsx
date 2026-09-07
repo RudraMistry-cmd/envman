@@ -4,6 +4,25 @@ import { TrashIcon, PlusIcon, RefreshIcon } from '../shared/icons'
 import LogPanel from '../shared/LogPanel'
 import { API } from '../../apiConfig'
 
+function formatNetworkName(name) {
+  if (!name) return ''
+  if (name.startsWith('envman_net_')) {
+    const suffix = name.slice('envman_net_'.length)
+    if (suffix.length > 8) {
+      return `envman_net_${suffix.slice(0, 8)}`
+    }
+  }
+  return name
+}
+
+function getEnvironmentStatus(env) {
+  if (env.status) return env.status
+  if (!env.containers || env.containers.length === 0) return 'not running'
+  if (env.containers.every(c => c.status === 'stopped')) return 'stopped'
+  if (env.containers.every(c => c.status === 'running')) return 'running'
+  return 'partial'
+}
+
 export default function EnvironmentsDashboard({ onNew }) {
   const [environments, setEnvironments] = useState([])
   const [loading, setLoading] = useState(true)
@@ -133,12 +152,25 @@ export default function EnvironmentsDashboard({ onNew }) {
                   <span className="text-sm font-medium text-white truncate">
                     {env.id.slice(0, 8)}
                   </span>
-                  <span className="text-xs text-zinc-600">
-                    {env.network_name}
+                  <span className="text-xs text-zinc-600 font-mono" title={env.network_name}>
+                    {formatNetworkName(env.network_name)}
                   </span>
-                  <span className={'text-xs px-2 py-0.5 rounded-full ' + (env.containers.length > 0 && env.containers.every(function (c) { return c.status === 'stopped' }) ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-green-500/10 text-green-400 border border-green-500/20')}>
-                    {env.containers.length > 0 && env.containers.every(function (c) { return c.status === 'stopped' }) ? 'stopped' : 'running'}
-                  </span>
+                  {(() => {
+                    const status = getEnvironmentStatus(env)
+                    const badgeClass =
+                      status === 'running'
+                        ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                        : status === 'stopped'
+                        ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                        : status === 'partial'
+                        ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                        : 'bg-zinc-500/10 text-zinc-400 border border-zinc-500/20'
+                    return (
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${badgeClass}`}>
+                        {status}
+                      </span>
+                    )
+                  })()}
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {env.containers.map(c => (
@@ -173,7 +205,7 @@ export default function EnvironmentsDashboard({ onNew }) {
                         </div>
                       )}
 
-{/* View logs button */}
+                      {/* View logs button */}
                       <button
                         onClick={() => viewContainerLogs(env.id, c.name)}
                         className="text-zinc-600 text-xs hover:text-zinc-300 transition-colors p-1 rounded"
@@ -196,15 +228,17 @@ export default function EnvironmentsDashboard({ onNew }) {
               <div className="ml-4 flex items-center gap-1">
               <button
                 onClick={() => stopEnvironment(env.id)}
-                className="p-2 rounded-lg text-zinc-500 hover:text-amber-400 hover:bg-amber-500/10 transition-colors"
-                title="Stop environment"
+                disabled={env.containers.length === 0}
+                className="p-2 rounded-lg text-zinc-500 hover:text-amber-400 hover:bg-amber-500/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-zinc-500"
+                title={env.containers.length === 0 ? "No containers to stop" : "Stop environment"}
               >
                 Stop
               </button>
               <button
                 onClick={() => startEnvironment(env.id)}
-                className="p-2 rounded-lg text-zinc-500 hover:text-green-400 hover:bg-green-500/10 transition-colors"
-                title="Start environment"
+                disabled={env.containers.length === 0}
+                className="p-2 rounded-lg text-zinc-500 hover:text-green-400 hover:bg-green-500/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-zinc-500"
+                title={env.containers.length === 0 ? "No containers to start" : "Start environment"}
               >
                 Start
               </button>

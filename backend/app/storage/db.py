@@ -23,6 +23,7 @@ THINK OF IT LIKE:
 
 import sqlite3
 import os
+import subprocess
 from datetime import datetime, timezone
 from app.utils.logger import get_logger
 
@@ -274,11 +275,22 @@ def get_all_environments():
                 "_stored_connection_string": stored_connection_string,
             })
 
+        # Derive overall environment status
+        if not container_list:
+            env_status = "not running"
+        elif all(c["status"] == "stopped" for c in container_list):
+            env_status = "stopped"
+        elif all(c["status"] == "running" for c in container_list):
+            env_status = "running"
+        else:
+            env_status = "partial"
+
         environments.append({
             "id": env_id,
             "network_name": network_name,
             "created_at": created_at,
             "containers": container_list,
+            "status": env_status,
         })
 
     conn.close()
@@ -307,14 +319,14 @@ def update_container_status(env_id: str, name: str, status: str):
 def delete_environment(env_id: str):
     """Delete an environment: stop/remove containers, remove network, delete DB rows.
 
-    WHY: Clean up all resources when user clicks Delete on the dashboard.
+    WHY: Clean up all resources when user clicks Delete on the dashboard, or when
+         setup fails mid-flight.
 
     HOW:
         1. Get all containers for this environment
-        2. Stop and remove each container via Docker CLI
-        3. Remove the Docker network
-        4. Delete all container records from DB
-        5. Delete the environment record from DB
+        2. Stop and remove each container via Docker CLI (isolated per container)
+        3. Remove the Docker network if not shared (isolated)
+        4. Unconditionally delete all container and environment DB records in finally block
     """
     import subprocess
 
@@ -322,34 +334,60 @@ def delete_environment(env_id: str):
     env_row = get_environment(env_id)
 
     if not env_row:
-        logger.warning("environment %s not found for deletion", env_id)
+        logger.warning("environment %s not found for deletion; cleaning any orphaned records", env_id)
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM containers WHERE environment_id = ?", (env_id,))
+            cursor.execute("DELETE FROM environments WHERE id = ?", (env_id,))
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            logger.warning("failed to purge db records for non-existent env %s: %s", env_id, e)
         return
 
     network_name = env_row[1]
 
+    # Stop and remove each container individually without letting one failure abort cleanup
     for c in containers:
-        # c[2] is already the full container name (e.g. "envman_postgres")
         container_name = c[2]
-        result = subprocess.run(
-            ["docker", "rm", "-f", container_name],
-            capture_output=True, text=True, timeout=30,
-        )
-        if result.returncode != 0:
-            logger.warning("failed to remove container %s: %s", container_name, result.stderr.strip())
-
-    result = subprocess.run(
-        ["docker", "network", "rm", network_name],
-        capture_output=True, text=True, timeout=30,
-    )
-    if result.returncode != 0:
-        logger.warning("failed to remove network %s: %s", network_name, result.stderr.strip())
+        try:
+            result = subprocess.run(
+                ["docker", "rm", "-f", container_name],
+                capture_output=True, text=True, timeout=30,
+            )
+            if result.returncode != 0:
+                logger.warning("failed to remove container %s: %s", container_name, result.stderr.strip())
+        except Exception as e:
+            logger.warning("exception while removing container %s: %s", container_name, e)
 
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM containers WHERE environment_id = ?", (env_id,))
-    cursor.execute("DELETE FROM environments WHERE id = ?", (env_id,))
-    conn.commit()
-    conn.close()
+
+    try:
+        # Only remove network if no other active environment in DB uses it
+        cursor.execute("SELECT COUNT(*) FROM environments WHERE network_name = ? AND id != ?", (network_name, env_id))
+        other_users = cursor.fetchone()[0]
+        if other_users == 0:
+            try:
+                result = subprocess.run(
+                    ["docker", "network", "rm", network_name],
+                    capture_output=True, text=True, timeout=30,
+                )
+                if result.returncode != 0:
+                    logger.warning("failed to remove network %s: %s", network_name, result.stderr.strip())
+            except Exception as e:
+                logger.warning("exception while removing network %s: %s", network_name, e)
+        else:
+            logger.info("network %s is still in use by %d other environment(s); skipping network removal", network_name, other_users)
+    finally:
+        # DB deletion must ALWAYS succeed regardless of Docker CLI outcome
+        try:
+            cursor.execute("DELETE FROM containers WHERE environment_id = ?", (env_id,))
+            cursor.execute("DELETE FROM environments WHERE id = ?", (env_id,))
+            conn.commit()
+        finally:
+            conn.close()
 
     logger.info("environment %s fully deleted", env_id)
 

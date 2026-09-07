@@ -32,7 +32,7 @@ THINK OF IT LIKE:
 import asyncio
 import socket
 import subprocess
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from app.models.step import Step
 from app.engine.state import store_container
 from app.engine.port_allocator import port_allocator, NoPortAvailableError
@@ -175,6 +175,42 @@ async def _pull_image(image: str) -> Dict[str, Any]:
     return await run_command(["docker", "pull", image])
 
 
+def build_docker_run_cmd(
+    name: str,
+    image: str,
+    network_name: str,
+    host_port: Optional[int] = None,
+    container_port: Optional[int] = None,
+    raw_port: Optional[Any] = None,
+    volume: Optional[str] = None,
+    env: Optional[Any] = None,
+    command: Optional[Any] = None,
+) -> List[str]:
+    """Build the docker run command safely as a list."""
+    cmd: List[str] = ["docker", "run", "-d", "--name", name, "--network", network_name]
+    if host_port is not None and container_port is not None:
+        cmd.extend(["-p", f"{host_port}:{container_port}"])
+    elif raw_port:
+        cmd.extend(["-p", str(raw_port)])
+
+    if volume:
+        cmd.extend(["-v", volume])
+
+    if env:
+        if isinstance(env, dict):
+            for key, value in env.items():
+                cmd.extend(["-e", f"{key}={value}"])
+        else:
+            cmd.extend(["-e", env])
+
+    cmd.append(image)
+    if command:
+        if isinstance(command, str):
+            command = [command]
+        cmd.extend(command)
+    return cmd
+
+
 async def _start_container(step: Step, network_name: str, env_id: str = None) -> Dict[str, Any]:
     """Start a Docker container.
 
@@ -232,39 +268,22 @@ async def _start_container(step: Step, network_name: str, env_id: str = None) ->
         else:
             port_allocator.allocated[host_port] = name
 
-    def _build_cmd(curr_host_port: Optional[int]) -> List[str]:
-        cmd: List[str] = ["docker", "run", "-d", "--name", name, "--network", network_name]
-        if curr_host_port is not None and container_port is not None:
-            cmd.extend(["-p", f"{curr_host_port}:{container_port}"])
-        elif raw_port:
-            cmd.extend(["-p", str(raw_port)])
-
-        volume = step.params.get("volume")
-        if volume:
-            cmd.extend(["-v", volume])
-
-        env = step.params.get("env")
-        if env:
-            if isinstance(env, dict):
-                for key, value in env.items():
-                    cmd.extend(["-e", f"{key}={value}"])
-            else:
-                cmd.extend(["-e", env])
-
-        cmd.append(image)
-        command = step.params.get("command")
-        if command:
-            if isinstance(command, str):
-                command = [command]
-            cmd.extend(command)
-        return cmd
-
     max_retries = 5
     attempts = 0
     result: Dict[str, Any] = {"stdout": "", "stderr": "", "code": -1}
 
     while attempts <= max_retries:
-        cmd = _build_cmd(assigned_host_port)
+        cmd = build_docker_run_cmd(
+            name=name,
+            image=image,
+            network_name=network_name,
+            host_port=assigned_host_port,
+            container_port=container_port,
+            raw_port=raw_port,
+            volume=step.params.get("volume"),
+            env=step.params.get("env"),
+            command=step.params.get("command"),
+        )
         result = await run_command(cmd)
         if result["code"] == 0:
             break

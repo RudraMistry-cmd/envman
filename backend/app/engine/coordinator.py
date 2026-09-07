@@ -61,7 +61,7 @@ async def run_setup(config: EnvironmentConfig) -> str:
     try:
         # PHASE 1: Plan
         logger.info("--- PHASE 1: Planning ---")
-        plan = await plan_environment(config)
+        plan = await plan_environment(config, env_id=env_id)
         total_steps = len(plan.steps)
 
         # Persist environment record
@@ -95,31 +95,39 @@ async def run_setup(config: EnvironmentConfig) -> str:
                 result = await execute_step(step, plan.network_name, env_id)
             except Exception as e:
                 logger.error("step '%s' raised exception: %s", step.id, str(e))
-                await emit("step_failed", {
-                    "step": step.id,
-                    "error": str(e),
-                    "step_index": idx,
-                    "total_steps": total_steps,
-                    "message": f"Step {step.id} failed: {str(e)}",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                })
-                # Tear down partially-created environment
-                delete_environment(env_id)
+                try:
+                    await emit("step_failed", {
+                        "step": step.id,
+                        "error": str(e),
+                        "step_index": idx,
+                        "total_steps": total_steps,
+                        "message": f"Step {step.id} failed: {str(e)}",
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                    })
+                except Exception as emit_err:
+                    logger.warning("failed to emit step_failed: %s", emit_err)
+                finally:
+                    # Tear down partially-created environment unconditionally
+                    delete_environment(env_id)
                 return env_id
 
             # Check result
             if result["code"] != 0:
                 logger.error("step '%s' failed (code %d)", step.id, result["code"])
-                await emit("step_failed", {
-                    "step": step.id,
-                    "error": result["stderr"],
-                    "step_index": idx,
-                    "total_steps": total_steps,
-                    "message": f"Step {step.id} failed: {result['stderr'][:200]}",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                })
-                # Tear down partially-created environment
-                delete_environment(env_id)
+                try:
+                    await emit("step_failed", {
+                        "step": step.id,
+                        "error": result["stderr"],
+                        "step_index": idx,
+                        "total_steps": total_steps,
+                        "message": f"Step {step.id} failed: {result['stderr'][:200]}",
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                    })
+                except Exception as emit_err:
+                    logger.warning("failed to emit step_failed: %s", emit_err)
+                finally:
+                    # Tear down partially-created environment unconditionally
+                    delete_environment(env_id)
                 return env_id
 
             # Step succeeded
@@ -166,10 +174,17 @@ async def run_setup(config: EnvironmentConfig) -> str:
 
     except Exception as e:
         logger.error("setup failed with unexpected error: %s", str(e))
-        await emit("setup_failed", {
-            "error": str(e),
-            "message": f"Setup failed: {str(e)}",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        })
+        try:
+            delete_environment(env_id)
+        except Exception as cleanup_err:
+            logger.error("failed to clean up environment %s: %s", env_id, str(cleanup_err))
+        try:
+            await emit("setup_failed", {
+                "error": str(e),
+                "message": f"Setup failed: {str(e)}",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            })
+        except Exception as emit_err:
+            logger.warning("failed to emit setup_failed: %s", emit_err)
 
     return env_id

@@ -63,7 +63,7 @@ def _merge_env(registry_env: Dict[str, str], user_env: Optional[Dict[str, str]])
     return merged
 
 
-async def plan_environment(config: EnvironmentConfig) -> Plan:
+async def plan_environment(config: EnvironmentConfig, env_id: Optional[str] = None) -> Plan:
     """Create a step-by-step plan from the user's config.
 
     This is the BLUEPRINT. Nothing runs yet.
@@ -76,7 +76,10 @@ async def plan_environment(config: EnvironmentConfig) -> Plan:
       - Step: run_container(name, image, port, volume, env, network)
     """
     steps: List[Step] = []
-    network_name = config.network_name
+    if env_id and config.network_name == "envman_net":
+        network_name = f"envman_net_{env_id}"
+    else:
+        network_name = config.network_name
 
     # Network creation step (always first)
     steps.append(Step(

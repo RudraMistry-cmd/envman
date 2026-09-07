@@ -50,6 +50,7 @@ caught the double-prefix bug without ever touching Docker."""
 
 import os
 import tempfile
+from unittest.mock import patch, MagicMock
 
 from app.storage.db import save_container, get_containers, delete_environment
 
@@ -116,3 +117,138 @@ class TestDeleteEnvironmentNameIntegrity:
             name = f"envman_{svc}"
             assert not name.startswith("envman_envman_"), f"Double prefix for {svc}"
             assert name == f"envman_{svc}"
+
+
+class TestDeleteEnvironmentFaultTolerance:
+    """Ensure delete_environment ALWAYS cleans up SQLite records even when Docker commands fail."""
+
+    @patch("app.storage.db.subprocess.run")
+    def test_delete_environment_purges_db_when_docker_rm_fails(self, mock_run, monkeypatch, tmp_path):
+        import app.storage.db as db_mod
+
+        # Use an isolated temporary sqlite DB
+        test_db = str(tmp_path / "test_envman.db")
+        monkeypatch.setattr(db_mod, "DB_PATH", test_db)
+        db_mod.init_db()
+
+        env_id = "fail_test_env_1"
+        db_mod.save_environment(env_id, "envman_net_fail1")
+        db_mod.save_container("cid1", env_id, "envman_node", "node:20", "running")
+
+        # Simulate docker rm failure (non-zero returncode and exception)
+        mock_run.side_effect = Exception("docker daemon unavailable")
+
+        # delete_environment must not raise, and must delete the DB records
+        db_mod.delete_environment(env_id)
+
+        assert db_mod.get_environment(env_id) is None
+        assert db_mod.get_containers(env_id) == []
+
+    @patch("app.storage.db.subprocess.run")
+    def test_delete_environment_purges_db_when_network_rm_fails(self, mock_run, monkeypatch, tmp_path):
+        import app.storage.db as db_mod
+
+        test_db = str(tmp_path / "test_envman.db")
+        monkeypatch.setattr(db_mod, "DB_PATH", test_db)
+        db_mod.init_db()
+
+        env_id = "fail_test_env_2"
+        db_mod.save_environment(env_id, "envman_net_fail2")
+        db_mod.save_container("cid2", env_id, "envman_mongo", "mongo:7", "running")
+
+        # docker rm container succeeds, but docker network rm fails with active endpoints
+        def fake_run(cmd, *args, **kwargs):
+            if "network" in cmd:
+                return MagicMock(returncode=1, stderr="error: network has active endpoints")
+            return MagicMock(returncode=0, stdout="", stderr="")
+
+        mock_run.side_effect = fake_run
+
+        db_mod.delete_environment(env_id)
+
+        assert db_mod.get_environment(env_id) is None
+        assert db_mod.get_containers(env_id) == []
+
+    def test_delete_environment_cleans_orphaned_containers_if_env_missing(self, monkeypatch, tmp_path):
+        import app.storage.db as db_mod
+
+        test_db = str(tmp_path / "test_envman.db")
+        monkeypatch.setattr(db_mod, "DB_PATH", test_db)
+        db_mod.init_db()
+
+        env_id = "orphaned_env"
+        # Only save container, no environment row
+        db_mod.save_container("cid_orphan", env_id, "envman_redis", "redis:7", "running")
+
+        assert len(db_mod.get_containers(env_id)) == 1
+
+        db_mod.delete_environment(env_id)
+
+        assert db_mod.get_containers(env_id) == []
+
+
+class TestEnvironmentStatusCalculation:
+    """Ensure get_all_environments derives correct top-level status."""
+
+    def test_status_when_no_containers_is_not_running(self, monkeypatch, tmp_path):
+        import app.storage.db as db_mod
+
+        test_db = str(tmp_path / "test_envman.db")
+        monkeypatch.setattr(db_mod, "DB_PATH", test_db)
+        db_mod.init_db()
+
+        env_id = "empty_env"
+        db_mod.save_environment(env_id, "envman_net_empty")
+
+        all_envs = db_mod.get_all_environments()
+        env = next(e for e in all_envs if e["id"] == env_id)
+        assert env["status"] == "not running"
+        assert env["containers"] == []
+
+    def test_status_when_all_stopped(self, monkeypatch, tmp_path):
+        import app.storage.db as db_mod
+
+        test_db = str(tmp_path / "test_envman.db")
+        monkeypatch.setattr(db_mod, "DB_PATH", test_db)
+        db_mod.init_db()
+
+        env_id = "stopped_env"
+        db_mod.save_environment(env_id, "envman_net_stopped")
+        db_mod.save_container("c1", env_id, "envman_node", "node:20", "stopped")
+        db_mod.save_container("c2", env_id, "envman_mongo", "mongo:7", "stopped")
+
+        all_envs = db_mod.get_all_environments()
+        env = next(e for e in all_envs if e["id"] == env_id)
+        assert env["status"] == "stopped"
+
+    def test_status_when_all_running(self, monkeypatch, tmp_path):
+        import app.storage.db as db_mod
+
+        test_db = str(tmp_path / "test_envman.db")
+        monkeypatch.setattr(db_mod, "DB_PATH", test_db)
+        db_mod.init_db()
+
+        env_id = "running_env"
+        db_mod.save_environment(env_id, "envman_net_running")
+        db_mod.save_container("c1", env_id, "envman_node", "node:20", "running")
+        db_mod.save_container("c2", env_id, "envman_mongo", "mongo:7", "running")
+
+        all_envs = db_mod.get_all_environments()
+        env = next(e for e in all_envs if e["id"] == env_id)
+        assert env["status"] == "running"
+
+    def test_status_when_mixed_is_partial(self, monkeypatch, tmp_path):
+        import app.storage.db as db_mod
+
+        test_db = str(tmp_path / "test_envman.db")
+        monkeypatch.setattr(db_mod, "DB_PATH", test_db)
+        db_mod.init_db()
+
+        env_id = "mixed_env"
+        db_mod.save_environment(env_id, "envman_net_mixed")
+        db_mod.save_container("c1", env_id, "envman_node", "node:20", "running")
+        db_mod.save_container("c2", env_id, "envman_mongo", "mongo:7", "stopped")
+
+        all_envs = db_mod.get_all_environments()
+        env = next(e for e in all_envs if e["id"] == env_id)
+        assert env["status"] == "partial"
