@@ -152,7 +152,7 @@ async def run_setup(config: EnvironmentConfig) -> str:
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
 
-        verification = await verify_environment()
+        verification = await verify_environment(env_id=env_id)
 
         # Check if all services are ready
         all_ready = all(v["status"] == "ready" for v in verification)

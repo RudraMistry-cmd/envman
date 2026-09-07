@@ -30,15 +30,21 @@ from app.utils.logger import get_logger
 logger = get_logger("state")
 
 container_registry: Dict[str, str] = {}
+env_container_registry: Dict[str, Dict[str, str]] = {}
 
 
 def store_container(step_id: str, container_id: str, env_id: str = None, name: str = None, image: str = None) -> None:
     """Save a container ID for a step.
 
-    FIX #6: Includes persistence hook with error handling.
+    Tracks container ID both globally (for backward compatibility) and scoped by env_id.
     """
     container_registry[step_id] = container_id
-    logger.info("stored: step '%s' -> container '%s'", step_id, container_id[:12])
+    if env_id:
+        if env_id not in env_container_registry:
+            env_container_registry[env_id] = {}
+        env_container_registry[env_id][step_id] = container_id
+
+    logger.info("stored: step '%s' -> container '%s' (env: %s)", step_id, container_id[:12], env_id)
 
     # Persistence hook (FIX #6: with error handling)
     if env_id and name and image:
@@ -59,8 +65,17 @@ def store_environment(env_id: str, network_name: str) -> None:
         logger.warning("Failed to persist environment: %s", e)
 
 
-def get_container(step_id: str) -> Optional[str]:
-    """Look up which container a step created."""
+def get_container(step_id: str, env_id: str = None) -> Optional[str]:
+    """Look up which container a step created, optionally scoped by env_id."""
+    if env_id:
+        scoped = env_container_registry.get(env_id, {})
+        cid = scoped.get(step_id)
+        if cid:
+            logger.debug("lookup: step '%s' (env '%s') -> container '%s'", step_id, env_id, cid[:12])
+        else:
+            logger.warning("lookup: step '%s' (env '%s') -> NOT FOUND", step_id, env_id)
+        return cid
+
     cid = container_registry.get(step_id)
     if cid:
         logger.debug("lookup: step '%s' -> container '%s'", step_id, cid[:12])
@@ -69,7 +84,22 @@ def get_container(step_id: str) -> Optional[str]:
     return cid
 
 
-def dump_registry() -> Dict[str, str]:
-    """Return a copy of all tracked containers (for debugging)."""
+def dump_registry(env_id: str = None) -> Dict[str, str]:
+    """Return a copy of tracked containers (optionally filtered by env_id)."""
+    if env_id:
+        scoped = env_container_registry.get(env_id, {})
+        logger.info("registry (env %s): %s", env_id, scoped)
+        return dict(scoped)
     logger.info("registry: %s", container_registry)
     return dict(container_registry)
+
+
+def clear_registry(env_id: str = None) -> None:
+    """Clear tracked in-memory containers."""
+    if env_id:
+        env_container_registry.pop(env_id, None)
+        logger.info("cleared registry for env %s", env_id)
+    else:
+        container_registry.clear()
+        env_container_registry.clear()
+        logger.info("cleared entire container registry")

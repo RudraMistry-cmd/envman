@@ -191,7 +191,7 @@ async def start_environment(env_id: str):
         })
 
     # Re-run verifier the same way fresh setup does
-    verification = await verify_environment()
+    verification = await verify_environment(env_id=env_id)
 
     return {
         "environment_id": env_id,

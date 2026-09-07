@@ -36,7 +36,7 @@ THINK OF IT LIKE:
 
 import asyncio
 import json
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from app.engine.executor import run_command
 from app.engine.state import get_container, dump_registry
 from app.registry.services import get_service_by_image
@@ -401,7 +401,7 @@ async def _discover_envman_containers() -> List[Dict[str, str]]:
     return containers
 
 
-async def _verify_service(name: str, image: str, port: int = None) -> Dict[str, Any]:
+async def _verify_service(name: str, image: str, port: int = None, container_name: str = None) -> Dict[str, Any]:
     """Verify a single service based on registry dispatch.
 
     WHY:
@@ -419,7 +419,8 @@ async def _verify_service(name: str, image: str, port: int = None) -> Dict[str, 
     THINK OF IT LIKE:
     A router that maps service type → verification behavior.
     """
-    container_name = f"envman_{name}"
+    if not container_name:
+        container_name = f"envman_{name}"
 
     # Check if container exists
     if not await _container_exists(container_name):
@@ -594,68 +595,86 @@ async def _verify_service(name: str, image: str, port: int = None) -> Dict[str, 
     }
 
 
-async def verify_environment() -> List[Dict[str, Any]]:
+async def verify_environment(env_id: Optional[str] = None) -> List[Dict[str, Any]]:
     """Run ALL verification checks and return a complete report.
 
     This is what we send to the frontend.
     Every service gets a clear status: ready, failed, not_found, etc.
 
-    DYNAMIC: Iterates over all containers in the registry
-    instead of hardcoding specific services.
+    SCOPED: If env_id is provided, checks ONLY containers belonging to that
+    environment via db.get_containers(env_id). It NEVER inspects containers
+    from unrelated environments.
 
-    FALLBACK: If in-memory registry is empty (e.g. after server restart),
-    discovers envman containers directly via Docker.
+    FALLBACK: If env_id is None, falls back to in-memory registry or Docker discovery.
     """
-    logger.info("=== starting verification ===")
-    registry = dump_registry()
+    logger.info("=== starting verification (env_id=%s) ===", env_id)
 
-    # Build work items from registry
-    work_items = []
+    work_items: List[Dict[str, Any]] = []
 
-    if registry:
-        # Use in-memory registry
-        for step_id, container_id in registry.items():
-            if not step_id.startswith("start_"):
-                continue
-            service_name = step_id[6:]
-            container_name = f"envman_{service_name}"
-            work_items.append({"step_id": step_id, "container_name": container_name})
+    if env_id:
+        from app.storage.db import get_containers
+        containers = get_containers(env_id)
+        logger.info("verifying %d container(s) for environment %s", len(containers), env_id)
+        for c in containers:
+            # c = (id, environment_id, name, image, status, host_port, connection_string)
+            container_name = c[2]
+            image = c[3] if len(c) > 3 else "unknown"
+            stored_host_port = c[5] if len(c) > 5 else None
+            work_items.append({
+                "container_name": container_name,
+                "image": image,
+                "stored_host_port": stored_host_port,
+            })
     else:
-        # Fallback: discover containers via Docker
-        logger.info("in-memory registry empty, discovering containers via Docker")
-        discovered = await _discover_envman_containers()
-        work_items = discovered
+        # Fallback only if no env_id was provided (e.g. standalone test)
+        registry = dump_registry()
+        if registry:
+            # Use in-memory registry
+            for step_id, container_id in registry.items():
+                if not step_id.startswith("start_"):
+                    continue
+                service_name = step_id[6:]
+                container_name = f"envman_{service_name}"
+                work_items.append({"container_name": container_name})
+        else:
+            # Fallback: discover containers via Docker
+            logger.info("in-memory registry empty, discovering containers via Docker")
+            discovered = await _discover_envman_containers()
+            work_items = discovered
 
     results: List[Dict[str, Any]] = []
 
     for item in work_items:
         container_name = item["container_name"]
         # Extract service name from container name
-        service_name = container_name.replace("envman_", "")
+        service_name = container_name.replace("envman_", "", 1) if container_name.startswith("envman_") else container_name
 
-        # Get image from container inspect
-        result = await run_command([
-            "docker", "inspect", "--format", "{{.Config.Image}}", container_name
-        ])
-        image = result["stdout"].strip() if result["code"] == 0 else "unknown"
+        # Get image from container inspect if not provided or unknown
+        image = item.get("image")
+        if not image or image == "unknown":
+            result = await run_command([
+                "docker", "inspect", "--format", "{{.Config.Image}}", container_name
+            ])
+            image = result["stdout"].strip() if result["code"] == 0 else "unknown"
 
-        # Get port from container inspect (first exposed port)
-        port = None
-        port_result = await run_command([
-            "docker", "inspect", "--format", "{{range $p, $conf := .NetworkSettings.Ports}}{{$p}} {{end}}", container_name
-        ])
-        if port_result["code"] == 0:
-            ports = port_result["stdout"].strip().split()
-            if ports:
-                port_str = ports[0].split("/")[0]
-                try:
-                    port = int(port_str)
-                except ValueError:
-                    pass
+        # Get port from stored_host_port or container inspect (first exposed port)
+        port = item.get("stored_host_port")
+        if port is None:
+            port_result = await run_command([
+                "docker", "inspect", "--format", "{{range $p, $conf := .NetworkSettings.Ports}}{{$p}} {{end}}", container_name
+            ])
+            if port_result["code"] == 0:
+                ports = port_result["stdout"].strip().split()
+                if ports:
+                    port_str = ports[0].split("/")[0]
+                    try:
+                        port = int(port_str)
+                    except ValueError:
+                        pass
 
         # Verify this service
-        verification = await _verify_service(service_name, image, port)
+        verification = await _verify_service(service_name, image, port, container_name=container_name)
         results.append(verification)
 
-    logger.info("=== verification complete ===")
+    logger.info("=== verification complete (%d services verified) ===", len(results))
     return results

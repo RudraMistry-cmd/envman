@@ -389,6 +389,12 @@ def delete_environment(env_id: str):
         finally:
             conn.close()
 
+    try:
+        from app.engine.state import clear_registry
+        clear_registry(env_id)
+    except Exception as e:
+        logger.warning("failed to clear in-memory state for env %s: %s", env_id, e)
+
     logger.info("environment %s fully deleted", env_id)
 
 
