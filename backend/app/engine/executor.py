@@ -30,6 +30,9 @@ THINK OF IT LIKE:
 """
 
 import asyncio
+import os
+import re
+import shutil
 import socket
 import subprocess
 from typing import Dict, Any, List, Optional
@@ -39,6 +42,90 @@ from app.engine.port_allocator import port_allocator, NoPortAvailableError
 from app.utils.logger import get_logger
 
 logger = get_logger("executor")
+
+
+# --- hardening helpers (R2/R3/R4/R5/R7; no shell anywhere) ---
+# Sources: OWASP parameterization + allowlist regex; subprocess env-mapping + Windows arg-string notes.
+_NAME_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$")
+_ENV_KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,127}$")
+_SECRET_KEY_RE = re.compile(r"(password|secret|token|private|key)$", re.IGNORECASE)
+_MAX_ARG_LEN = 8192
+_MAX_ENV_VARS = 64
+
+
+def resolve_docker() -> str:
+    """Absolute docker binary path; falls back to 'docker' (R9 preflight aid)."""
+    return shutil.which("docker") or "docker"
+
+
+def validate_name(name: str) -> str:
+    """Allowlist container/network/image names (R3)."""
+    if not isinstance(name, str) or not _NAME_RE.match(name):
+        raise ValueError(f"bad docker name: {name!r}")
+    return name
+
+
+def validate_env(env: Any) -> List[str]:
+    """Flatten validated env mapping to ['-e', 'K=V', ...] (R4)."""
+    if env is None:
+        return []
+    items = list(env.items()) if isinstance(env, dict) else [(None, env)]
+    if len(items) > _MAX_ENV_VARS:
+        raise ValueError("too many env vars")
+    out: List[str] = []
+    for key, value in items:
+        if key is None:  # raw 'K=V' string form
+            pair = str(value)
+            if "=" not in pair or len(pair) > _MAX_ARG_LEN:
+                raise ValueError(f"bad env pair: {pair[:32]!r}")
+            k = pair.split("=", 1)[0]
+            if not _ENV_KEY_RE.match(k):
+                raise ValueError(f"bad env key: {k!r}")
+            out.extend(["-e", pair])
+            continue
+        if not _ENV_KEY_RE.match(str(key)):
+            raise ValueError(f"bad env key: {key!r}")
+        val = "" if value is None else str(value)
+        if len(val) > _MAX_ARG_LEN or "\n" in val or "\r" in val:
+            raise ValueError(f"bad env value for {key}")
+        out.extend(["-e", f"{key}={val}"])
+    return out
+
+
+def normalize_volume(volume: str) -> str:
+    """Normalize bind specs for WSL/Windows (R5)."""
+    if not isinstance(volume, str) or not volume:
+        raise ValueError("bad volume")
+    import re as _re
+    m = _re.match(r"^([A-Za-z]:[^:]*)(?::(.*))?$", volume)  # keep drive letter with host part
+    if m:
+        host, rest = m.group(1), m.group(2)
+    else:
+        host, _, rest = volume.partition(":")
+    if len(host) > 2 and host[1] == ":" and shutil.which("wslpath"):
+        try:
+            out = subprocess.run(
+                ["wslpath", "-a", host],
+                capture_output=True, text=True, timeout=10, shell=False,
+            )
+            if out.returncode == 0 and out.stdout.strip():
+                host = out.stdout.strip()
+        except Exception:
+            pass
+    else:
+        host = host.replace("\\", "/")
+    return host if rest is None else f"{host}:{rest}"
+
+
+def redact_cmd(cmd: List[str]) -> List[str]:
+    """Mask '-e KEY=secret' values for logging (R2)."""
+    red = list(cmd)
+    for i, a in enumerate(red[:-1]):
+        if a == "-e" and "=" in red[i + 1]:
+            k, _, _v = red[i + 1].partition("=")
+            if _SECRET_KEY_RE.search(k):
+                red[i + 1] = f"{k}=***"
+    return red
 
 
 def _run_sync(cmd: List[str], timeout: int) -> Dict[str, Any]:
@@ -109,7 +196,7 @@ async def run_command(cmd: List[str], timeout: int = 300) -> Dict[str, Any]:
          asyncio.to_thread runs subprocess.run in a background thread
          so the event loop stays free for WebSocket messages.
     """
-    logger.info("running: %s", " ".join(cmd))
+    logger.info("running: %s", " ".join(redact_cmd(cmd)))
 
     result = await asyncio.to_thread(_run_sync, cmd, timeout)
 
@@ -187,21 +274,21 @@ def build_docker_run_cmd(
     command: Optional[Any] = None,
 ) -> List[str]:
     """Build the docker run command safely as a list."""
-    cmd: List[str] = ["docker", "run", "-d", "--name", name, "--network", network_name]
+    validate_name(name)
+    validate_name(network_name)
+    for a in (image, str(raw_port or ""), str(command or "")):
+        if len(a) > _MAX_ARG_LEN:
+            raise ValueError("argument too long")
+    cmd: List[str] = [resolve_docker(), "run", "-d", "--name", name, "--network", network_name]
     if host_port is not None and container_port is not None:
         cmd.extend(["-p", f"{host_port}:{container_port}"])
     elif raw_port:
         cmd.extend(["-p", str(raw_port)])
 
     if volume:
-        cmd.extend(["-v", volume])
+        cmd.extend(["-v", normalize_volume(volume)])
 
-    if env:
-        if isinstance(env, dict):
-            for key, value in env.items():
-                cmd.extend(["-e", f"{key}={value}"])
-        else:
-            cmd.extend(["-e", env])
+    cmd.extend(validate_env(env))
 
     cmd.append(image)
     if command:

@@ -1,0 +1,1541 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8" />
+	<meta name="awa-expId" content="cv-downloadv2:1227264;" />
+	<meta name="awa-env" content="prod" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="google-site-verification" content="hNs7DXrTySP_X-0P_AC0WulAXvUwgSXEmgfcO2r79dw" />
+
+	<!-- Twitter and Facebook OpenGraph Metadata-->
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:site" content="@code" />
+
+	<meta name="description" content="Developing inside a Container using Visual Studio Code Remote Development" />
+<meta name="keywords" content="" />
+<meta name="ms.prod" content="vs-code" />
+<meta name="ms.TOCTitle" content="" />
+<meta name="ms.ContentId" content="7ec8a02b-2eb7-45c1-bb16-ddeaac694ff6" />
+<meta name="ms.date" content="9/9/2026" />
+<meta name="ms.topic" content="conceptual" />
+<!-- Twitter and Facebook OpenGraph Metadata-->
+<meta name="twitter:card" content="summary_large_image" />
+<meta property="og:url" content="https://code.visualstudio.com/docs/devcontainers/containers" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="Developing inside a Container" />
+<meta property="og:description" content="Developing inside a Container using Visual Studio Code Remote Development" />
+
+<meta property="og:image" content="https://code.visualstudio.com/opengraphimg/generated/docs/devcontainers/containers.webp" />
+
+
+
+	<link rel="shortcut icon" href="/assets/favicon.ico" sizes="128x128" />
+	<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+
+	<title>Developing inside a Container</title>
+
+	<link rel="stylesheet" href="/dist/style.css">
+
+	<script src="https://consentdeliveryfd.azurefd.net/mscc/lib/v2/wcp-consent.js"></script>
+	<script type="text/javascript" src="https://js.monitor.azure.com/scripts/c/ms.analytics-web-4.min.js"></script>
+	
+	<script type="text/javascript">
+	// Leave as var; siteConsent is initialized and referenced elsewhere.
+	var siteConsent = null;
+	
+	const GPC_DataSharingOptIn = false;
+	WcpConsent.onInitCallback(function () {
+		window.appInsights = new oneDS.ApplicationInsights();
+		window.appInsights.initialize({
+			instrumentationKey: "1a3eb3104447440391ad5f2a6ee06a0a-62879566-bc58-4741-9650-302bf2af703f-7103",
+			propertyConfiguration: {
+				userConsented: false,
+				gpcDataSharingOptIn: false,
+				callback: {
+					// Stable closure: the SDK calls this per-event, so it picks up the
+					// real consent state once WcpConsent.init() resolves (siteConsent
+					// is still null when this callback is registered).
+					userConsentDetails: function () {
+						return siteConsent ? siteConsent.getConsent() : undefined;
+					}
+				},
+			},
+			cookieCfg: {
+				ignoreCookies: ["MSCC"]
+			},
+			webAnalyticsConfiguration:{ // Web Analytics Plugin configuration
+				urlCollectQuery: true,
+				urlCollectHash: true,
+				autoCapture: {
+					scroll: true,
+					pageView: true,
+					onLoad: true,
+					onUnload: true,
+					click: true,
+					resize: true,
+					jsError: true
+				}
+			}
+		}, []);
+	
+		window.appInsights.getPropertyManager().getPropertiesContext().web.gpcDataSharingOptIn = GPC_DataSharingOptIn;
+	});
+	</script>
+	<link rel="alternate" type="application/atom+xml" title="RSS Feed for code.visualstudio.com" href="/feed.xml" />
+</head>
+
+<body >
+	<!-- Setting theme here to avoid FOUC -->
+	<script>
+		function setTheme(themeName) {
+			if (themeName === 'dark') {
+				document.documentElement.removeAttribute('data-theme'); // dark is default, so no data-theme attribute needed
+			}
+
+			if (themeName === 'light') {
+				document.documentElement.setAttribute('data-theme', themeName);
+			}
+			return;
+		}
+
+		// Determine initial theme: user preference or system preference
+		let theme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+		setTheme(theme); // Apply the initial theme
+
+		// Listen for changes in the system theme preference
+		window.matchMedia('(prefers-color-scheme: dark)').addListener(e => {
+			if (!localStorage.getItem('theme')) { // Only if no user preference is saved
+				setTheme(e.matches ? 'dark' : 'light');
+			}
+		});
+	</script>
+
+	<div id="main">
+		<div class="navbar-fixed-container">
+			<div class="navbar navbar-inverse navbar-fixed-top ">
+				<div id='cookie-banner'></div>		<nav role="navigation" aria-label="Top Level">
+					<div class="container">
+						<div class="nav navbar-header">
+							<a class="navbar-brand" href="/"><span>Visual Studio Code</span></a>
+						</div>
+						<div class="navbar-collapse collapse">
+							<ul class="nav navbar-nav navbar-left" data-m='{"cN":"top-navbar","aN":"navigation"}'>
+								<li class="nav-dropdown">
+									<a id="nav-features" href="#" class="nav-dropdown-toggle" role="button" aria-haspopup="true" aria-expanded="false" data-m='{"cN":"Features","aN":"navigation","cT":"toggle"}'>
+										Features <span class="nav-dropdown-caret" aria-hidden="true"></span>
+									</a>
+									<ul class="nav-dropdown-menu" role="menu">
+										<li role="none"><a role="menuitem" href="/features/agents" data-m='{"cN":"Agents","aN":"navigation - Features"}'>Agents</a></li>
+										<li role="none"><a role="menuitem" href="/features/customizations" data-m='{"cN":"Agent Customization","aN":"navigation - Features"}'>Agent Customization</a></li>
+										<li role="none"><a role="menuitem" href="/features/models" data-m='{"cN":"Models &amp; Agent Harnesses","aN":"navigation - Features"}'>Models &amp; Agent Harnesses</a></li>
+										<li role="none"><a role="menuitem" href="/features/enterprise" data-m='{"cN":"Enterprise","aN":"navigation - Features"}'>Enterprise</a></li>
+										<li role="none"><a role="menuitem" href="/features/extensibility" data-m='{"cN":"Extensibility","aN":"navigation - Features"}'>Extensibility</a></li>
+									</ul>
+								</li>
+								<li class="nav-dropdown active">
+									<a id="nav-docs" href="#" class="nav-dropdown-toggle" role="button" aria-haspopup="true" aria-expanded="false" data-m='{"cN":"Docs","aN":"navigation","cT":"toggle"}'>
+										Docs <span class="nav-dropdown-caret" aria-hidden="true"></span>
+									</a>
+									<ul class="nav-dropdown-menu" role="menu">
+										<li role="none"><a role="menuitem" href="/docs" data-m='{"cN":"Documentation","aN":"navigation - Docs"}'>Documentation</a></li>
+										<li role="none"><a role="menuitem" href="/api" data-m='{"cN":"API","aN":"navigation - Docs"}'>API</a></li>
+										<li role="none"><a role="menuitem" id="nav-faqs" href="/docs/supporting/faq" data-m='{"cN":"FAQ","aN":"navigation - Docs"}'>FAQ</a></li>
+									</ul>
+								</li>
+								<li ><a id="nav-updates" href="/updates" data-m='{"cN":"Release Notes"}'>Release Notes</a>
+								</li>
+								<li ><a id="nav-blogs" href="/blogs" data-m='{"cN":"Blog"}'>Blog</a></li>
+								<li ><a id="nav-learn" href="/learn" data-m='{"cN":"Learn"}'>Learn</a></li>
+								<li><a id="nav-events" href="https://aka.ms/vscode/live" target="_blank" rel="noopener" data-m='{"cN":"Events"}'>Events<span class="codicon codicon-link-external nav-external-icon" aria-hidden="true"></span></a></li>
+								<li class="nav-dropdown">
+									<a id="nav-resources" href="#" class="nav-dropdown-toggle" role="button" aria-haspopup="true" aria-expanded="false" data-m='{"cN":"Resources","aN":"navigation","cT":"toggle"}'>
+										Resources <span class="nav-dropdown-caret" aria-hidden="true"></span>
+									</a>
+									<ul class="nav-dropdown-menu" role="menu">
+										<li role="none"><a role="menuitem" href="https://marketplace.visualstudio.com/VSCode" target="_blank" rel="noopener"
+												id="nav-extensions" data-m='{"cN":"Extensions","aN":"navigation - Resources"}'>Extensions<span class="codicon codicon-link-external nav-external-icon" aria-hidden="true"></span></a></li>
+										<li role="none"><a role="menuitem" id="nav-mcp" href="/mcp" target="_blank" rel="noopener" data-m='{"cN":"MCP","aN":"navigation - Resources"}'>MCP<span class="codicon codicon-link-external nav-external-icon" aria-hidden="true"></span></a></li>
+									</ul>
+								</li>
+							</ul>
+							<ul class="nav navbar-nav navbar-right" role="presentation">
+								<li>
+									<a class="link-button" href="/download" id="nav-download">
+										<span>Download</span>
+									</a>
+								</li>
+							</ul>
+						</div>
+						<div class="navbar-actions">
+							<div class="search" role="presentation">
+								<div class="nav-search search-control" role="button" tabindex="0" aria-label="Open search dialog">
+									<div class="input-group" role="presentation">
+										<span class="input-group-btn">
+											<span class="btn search-icon-container" aria-hidden="true">
+												<img class="search-icon-dark" src="/assets/icons/search-dark.svg" alt="" />
+												<img class="search-icon-light" src="/assets/icons/search.svg" alt="" />
+											</span>
+										</span>
+										<span class="search-box form-control" aria-hidden="true" role="presentation"></span>
+										<span class="search-shortcut-placeholder">Search</span>
+										<span class="search-shortcut-overlay"></span>
+									</div>
+								</div>					</div>
+							<button type="button" class="theme-switch" id="theme-toggle">
+								<img class="theme-icon-light" src="/assets/icons/theme-light.svg" alt="Switch to the dark theme" />
+								<img class="theme-icon-dark" src="/assets/icons/theme-dark.svg" alt="Switch to the light theme" />
+							</button>
+							<a class="link-button navbar-actions-download" href="/Download">
+								<span>Download</span>
+							</a>
+						</div>
+						<button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse"
+							aria-label="Expand and Collapse Menu">
+							<span class="icon-bar"></span>
+							<span class="icon-bar"></span>
+							<span class="icon-bar"></span>
+						</button>
+					</div>
+				</nav>
+			</div>
+		</div>		<div data-announcement-version="2026-09-09-vscode-documentary-agent-host" data-rotation-interval-seconds="8" class="updates-banner ">
+			<div class="container banner-messages">
+				<p class="message active" data-banner-message aria-hidden="false"><a href="https://aka.ms/the-story-of-vs-code?source=vsc-website-banner" target="_blank" rel="noopener">🎬 Watch The Story of VS Code!</a></p>
+				<p class="message " data-banner-message aria-hidden="true"><a href="https://code.visualstudio.com/blogs/2026/08/26/agent-host-architecture?source=vsc-website-banner" target="_self" rel="noopener">Blog: Enable persistent, portable agent sessions with the Agent Host.</a></p>
+				<p class="message " data-banner-message aria-hidden="true"><a href="https://gh.io/githubcopilotday?source=vsc-website-banner" target="_blank" rel="noopener">Join GitHub Copilot Day live on September 10!</a></p>
+			</div>
+			<button type="button" title="Dismiss this update" class="dismiss-btn" id="banner-dismiss-btn"><span class="sr-only">Dismiss this update</span><span aria-hidden="true" class="glyph-icon"></span></button>
+		</div>
+		<script>
+			// Restore dismissal and the session's random starting message before first paint.
+			(function () {
+				var banner = document.currentScript.previousElementSibling;
+				if (!banner) {
+					return;
+				}
+		
+				var version = banner.getAttribute('data-announcement-version');
+				try {
+					if (localStorage.getItem('dismissedAnnouncementVersion') === version) {
+						banner.classList.add('js-hidden');
+					}
+				} catch (error) {
+					console.warn('Unable to restore banner dismissal state.', error);
+				}
+		
+				var messages = banner.querySelectorAll('[data-banner-message]');
+				if (messages.length < 2) {
+					return;
+				}
+		
+				var storageKey = 'initialAnnouncementMessage:' + version;
+				var activeIndex;
+				try {
+					var storedIndex = sessionStorage.getItem(storageKey);
+					if (storedIndex !== null) {
+						activeIndex = Number(storedIndex);
+					}
+				} catch (error) {
+					console.warn('Unable to restore the initial banner message.', error);
+				}
+				if (!Number.isInteger(activeIndex) || activeIndex < 0 || activeIndex >= messages.length) {
+					activeIndex = Math.floor(Math.random() * messages.length);
+					try {
+						sessionStorage.setItem(storageKey, String(activeIndex));
+					} catch (error) {
+						console.warn('Unable to remember the initial banner message.', error);
+					}
+				}
+		
+				for (var index = 0; index < messages.length; index++) {
+					var isActive = index === activeIndex;
+					messages[index].classList.toggle('active', isActive);
+					messages[index].setAttribute('aria-hidden', String(!isActive));
+				}
+				banner.setAttribute('data-active-message-index', String(activeIndex));
+			})();
+		</script>
+		<!-- This div wraps around the entire site -->
+		<!-- The body itself should already have a main tag -->
+		<main id="main-content">
+			<script>
+    function closeReportIssue() {
+        var element = document.getElementById('surveypopup');
+        element.parentElement.removeChild(element);
+    }
+
+    function reportIssue(tutorial, page) {
+        var div = document.createElement('div');
+        div.innerHTML = '<div id="surveypopup" class="overlay visible"><div class="surveypopup"><div id="surveytitle">Tell us more<a href="javascript:void(0)" onclick="closeReportIssue()">X</a></div><div id="surveydiv"><iframe frameBorder="0" scrolling="0" src="https://www.research.net/r/PWZWZ52?tutorial=' + tutorial + '&step=' + page + '"></iframe></div></div></div>';
+        document.body.appendChild(div.children[0]);
+    }
+</script>
+
+<div class="body-content docs docs-github-layout">
+    <div class="docs-layout-wrapper">
+        <!-- Left sidebar - Table of Contents -->
+        <aside class="docs-left-sidebar">
+            <nav id="docs-navbar" aria-label="Topics" class="docs-nav visible-md visible-lg" data-m='{"cN":"docs-left-nav","aN":"navigation"}'>
+              <div class="docs-nav-back">
+                <a class="area" href="/docs" aria-label="Back to all documentation"><span class="codicon codicon-arrow-left" aria-hidden="true"></span><span>All Docs</span></a>
+              </div>
+              <h4>Extension Docs</h4>
+              <ul class="nav" id="main-nav">
+              <li >
+                <a href="/docs/extension-docs/overview" data-m='{"cN":"Overview"}' >Overview</a>
+              </li>
+              
+            <li class="panel collapsed">
+              <a class="area" role="button" href="#containers-articles" data-parent="#main-nav" data-toggle="collapse" data-m='{"cN":"Container Tools","cT":"toggle"}'>Container Tools</a>
+              <ul id="containers-articles" class="collapse ">
+            
+                    <li >
+                      <a href="/docs/containers/overview" data-m='{"cN":"Overview","aN":"Container Tools"}' >Overview</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/containers/quickstart-node" data-m='{"cN":"Node.js","aN":"Container Tools"}' >Node.js</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/containers/quickstart-python" data-m='{"cN":"Python","aN":"Container Tools"}' >Python</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/containers/quickstart-aspnet-core" data-m='{"cN":"ASP.NET Core","aN":"Container Tools"}' >ASP.NET Core</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/containers/debug-common" data-m='{"cN":"Debug","aN":"Container Tools"}' >Debug</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/containers/docker-compose" data-m='{"cN":"Docker Compose","aN":"Container Tools"}' >Docker Compose</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/containers/quickstart-container-registries" data-m='{"cN":"Registries","aN":"Container Tools"}' >Registries</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/containers/app-service" data-m='{"cN":"Deploy to Azure","aN":"Container Tools"}' >Deploy to Azure</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/containers/choosing-dev-environment" data-m='{"cN":"Choose a Dev Environment","aN":"Container Tools"}' >Choose a Dev Environment</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/containers/reference" data-m='{"cN":"Customize","aN":"Container Tools"}' >Customize</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/containers/bridge-to-kubernetes" data-m='{"cN":"Develop with Kubernetes","aN":"Container Tools"}' >Develop with Kubernetes</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/containers/troubleshooting" data-m='{"cN":"Tips and Tricks","aN":"Container Tools"}' >Tips and Tricks</a>
+                    </li>
+                      
+              </ul>
+            </li>
+                
+            <li class="panel collapsed">
+              <a class="area" role="button" href="#datascience-articles" data-parent="#main-nav" data-toggle="collapse" data-m='{"cN":"Data Science","cT":"toggle"}'>Data Science</a>
+              <ul id="datascience-articles" class="collapse ">
+            
+                    <li >
+                      <a href="/docs/datascience/overview" data-m='{"cN":"Overview","aN":"Data Science"}' >Overview</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/datascience/jupyter-notebooks" data-m='{"cN":"Jupyter Notebooks","aN":"Data Science"}' >Jupyter Notebooks</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/datascience/data-science-tutorial" data-m='{"cN":"Data Science Tutorial","aN":"Data Science"}' >Data Science Tutorial</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/datascience/python-interactive" data-m='{"cN":"Python Interactive","aN":"Data Science"}' >Python Interactive</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/datascience/data-wrangler-quick-start" data-m='{"cN":"Data Wrangler Quick Start","aN":"Data Science"}' >Data Wrangler Quick Start</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/datascience/data-wrangler" data-m='{"cN":"Data Wrangler","aN":"Data Science"}' >Data Wrangler</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/datascience/pytorch-support" data-m='{"cN":"PyTorch Support","aN":"Data Science"}' >PyTorch Support</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/datascience/azure-machine-learning" data-m='{"cN":"Azure Machine Learning","aN":"Data Science"}' >Azure Machine Learning</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/datascience/jupyter-kernel-management" data-m='{"cN":"Manage Jupyter Kernels","aN":"Data Science"}' >Manage Jupyter Kernels</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/datascience/notebooks-web" data-m='{"cN":"Jupyter Notebooks on the Web","aN":"Data Science"}' >Jupyter Notebooks on the Web</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/datascience/microsoft-fabric-quickstart" data-m='{"cN":"Data Science in Microsoft Fabric","aN":"Data Science"}' >Data Science in Microsoft Fabric</a>
+                    </li>
+                      
+              </ul>
+            </li>
+                
+            <li class="panel collapsed">
+              <a class="area" role="button" href="#intelligentapps-articles" data-parent="#main-nav" data-toggle="collapse" data-m='{"cN":"Intelligent Apps","cT":"toggle"}'>Intelligent Apps</a>
+              <ul id="intelligentapps-articles" class="collapse ">
+            
+                    <li >
+                      <a href="/docs/intelligentapps/overview" data-m='{"cN":"Foundry Toolkit Overview","aN":"Intelligent Apps"}' >Foundry Toolkit Overview</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/intelligentapps/copilot-tools" data-m='{"cN":"Foundry Toolkit Copilot Tools","aN":"Intelligent Apps"}' >Foundry Toolkit Copilot Tools</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/intelligentapps/create-agents" data-m='{"cN":"Create Agents","aN":"Intelligent Apps"}' >Create Agents</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/intelligentapps/models" data-m='{"cN":"Models","aN":"Intelligent Apps"}' >Models</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/intelligentapps/playground" data-m='{"cN":"Playground","aN":"Intelligent Apps"}' >Playground</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/intelligentapps/agentbuilder" data-m='{"cN":"Agent Builder","aN":"Intelligent Apps"}' >Agent Builder</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/intelligentapps/agent-inspector" data-m='{"cN":"Agent Inspector","aN":"Intelligent Apps"}' >Agent Inspector</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/intelligentapps/hosted-agents" data-m='{"cN":"Hosted Agents (Preview)","aN":"Intelligent Apps"}' >Hosted Agents (Preview)</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/intelligentapps/evaluation" data-m='{"cN":"Evaluation","aN":"Intelligent Apps"}' >Evaluation</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/intelligentapps/tool-catalog" data-m='{"cN":"Tool Catalog","aN":"Intelligent Apps"}' >Tool Catalog</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/intelligentapps/finetune" data-m='{"cN":"Fine-Tuning (Automated Setup)","aN":"Intelligent Apps"}' >Fine-Tuning (Automated Setup)</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/intelligentapps/finetune-legacy" data-m='{"cN":"Fine-Tuning (Project Template)","aN":"Intelligent Apps"}' >Fine-Tuning (Project Template)</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/intelligentapps/modelconversion" data-m='{"cN":"Model Conversion","aN":"Intelligent Apps"}' >Model Conversion</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/intelligentapps/tracing" data-m='{"cN":"Tracing","aN":"Intelligent Apps"}' >Tracing</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/intelligentapps/profiling" data-m='{"cN":"Profiling (Windows ML)","aN":"Intelligent Apps"}' >Profiling (Windows ML)</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/intelligentapps/faq" data-m='{"cN":"FAQ","aN":"Intelligent Apps"}' >FAQ</a>
+                    </li>
+                      
+            <li class="panel collapsed">
+              <a class="area" role="button" href="#intelligentapps-reference-articles" data-toggle="collapse" data-m='{"cN":"Reference","aN":"Intelligent Apps","cT":"toggle"}'>Reference</a>
+              <ul id="intelligentapps-reference-articles" class="collapse ">
+            
+                    <li >
+                      <a href="/docs/intelligentapps/reference/FileStructure" data-m='{"cN":"File Structure","aN":"Intelligent Apps - Reference"}' >File Structure</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/intelligentapps/reference/ManualModelConversion" data-m='{"cN":"Manual Model Conversion","aN":"Intelligent Apps - Reference"}' >Manual Model Conversion</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/intelligentapps/reference/ManualConversionOnGPU" data-m='{"cN":"Manual Model Conversion on GPU","aN":"Intelligent Apps - Reference"}' >Manual Model Conversion on GPU</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/intelligentapps/reference/SetupWithoutAITK" data-m='{"cN":"Setup Environment Without Foundry Toolkit","aN":"Intelligent Apps - Reference"}' >Setup Environment Without Foundry Toolkit</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/intelligentapps/reference/UpdateModelProject" data-m='{"cN":"Update Project","aN":"Intelligent Apps - Reference"}' >Update Project</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/intelligentapps/reference/TemplateProject" data-m='{"cN":"Template Project","aN":"Intelligent Apps - Reference"}' >Template Project</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/intelligentapps/reference/migrate-from-visualizer" data-m='{"cN":"Migrating from Visualizer to Agent Inspector","aN":"Intelligent Apps - Reference"}' >Migrating from Visualizer to Agent Inspector</a>
+                    </li>
+                      
+              </ul>
+            </li>
+                    
+              </ul>
+            </li>
+                
+            <li class="panel collapsed">
+              <a class="area" role="button" href="#azure-articles" data-parent="#main-nav" data-toggle="collapse" data-m='{"cN":"Azure","cT":"toggle"}'>Azure</a>
+              <ul id="azure-articles" class="collapse ">
+            
+                    <li >
+                      <a href="/docs/azure/overview" data-m='{"cN":"Overview","aN":"Azure"}' >Overview</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/azure/gettingstarted" data-m='{"cN":"Getting Started","aN":"Azure"}' >Getting Started</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/azure/resourcesextension" data-m='{"cN":"Resources View","aN":"Azure"}' >Resources View</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/azure/deployment" data-m='{"cN":"Deployment","aN":"Azure"}' >Deployment</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/azure/vscodeforweb" data-m='{"cN":"VS Code for the Web - Azure","aN":"Azure"}' >VS Code for the Web - Azure</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/azure/containers" data-m='{"cN":"Containers","aN":"Azure"}' >Containers</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/azure/aksextensions" data-m='{"cN":"Azure Kubernetes Service","aN":"Azure"}' >Azure Kubernetes Service</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/azure/kubernetes" data-m='{"cN":"Kubernetes","aN":"Azure"}' >Kubernetes</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/azure/mongodb" data-m='{"cN":"MongoDB","aN":"Azure"}' >MongoDB</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/azure/remote-debugging" data-m='{"cN":"Remote Debugging for Node.js","aN":"Azure"}' >Remote Debugging for Node.js</a>
+                    </li>
+                      
+              </ul>
+            </li>
+                
+            <li class="panel active expanded">
+              <a class="area" role="button" href="#devcontainers-articles" data-parent="#main-nav" data-toggle="collapse" data-m='{"cN":"Dev Containers","cT":"toggle"}'>Dev Containers</a>
+              <ul id="devcontainers-articles" class="collapse in">
+            
+                    <li class="active">
+                      <a href="/docs/devcontainers/containers" data-m='{"cN":"Overview","aN":"Dev Containers"}' aria-label="Current Page: Overview">Overview</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/devcontainers/tutorial" data-m='{"cN":"Tutorial","aN":"Dev Containers"}' >Tutorial</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/devcontainers/attach-container" data-m='{"cN":"Attach to Container","aN":"Dev Containers"}' >Attach to Container</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/devcontainers/create-dev-container" data-m='{"cN":"Create Dev Container","aN":"Dev Containers"}' >Create Dev Container</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/devcontainers/containers-advanced" data-m='{"cN":"Advanced Containers","aN":"Dev Containers"}' >Advanced Containers</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/devcontainers/devcontainerjson-reference" data-m='{"cN":"devcontainer.json","aN":"Dev Containers"}' >devcontainer.json</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/devcontainers/devcontainer-cli" data-m='{"cN":"Dev Container CLI","aN":"Dev Containers"}' >Dev Container CLI</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/devcontainers/tips-and-tricks" data-m='{"cN":"Tips and Tricks","aN":"Dev Containers"}' >Tips and Tricks</a>
+                    </li>
+                      
+                    <li >
+                      <a href="/docs/devcontainers/faq" data-m='{"cN":"FAQ","aN":"Dev Containers"}' >FAQ</a>
+                    </li>
+                      
+              </ul>
+            </li>
+                
+              </ul>
+            </nav>
+            
+            <nav id="small-nav" aria-label="Topics" class="docs-nav hidden-md hidden-lg">
+              <label class="faux-h4" for="small-nav-dropdown-extension-docs">Topics</label>
+              <select id="small-nav-dropdown-extension-docs" aria-label="topics">
+                <option value="/docs/extension-docs/overview" >Overview</option>
+            
+              <optgroup label="Container Tools">
+            
+                    <option value="/docs/containers/overview" >Overview</option>
+                    
+                    <option value="/docs/containers/quickstart-node" >Node.js</option>
+                    
+                    <option value="/docs/containers/quickstart-python" >Python</option>
+                    
+                    <option value="/docs/containers/quickstart-aspnet-core" >ASP.NET Core</option>
+                    
+                    <option value="/docs/containers/debug-common" >Debug</option>
+                    
+                    <option value="/docs/containers/docker-compose" >Docker Compose</option>
+                    
+                    <option value="/docs/containers/quickstart-container-registries" >Registries</option>
+                    
+                    <option value="/docs/containers/app-service" >Deploy to Azure</option>
+                    
+                    <option value="/docs/containers/choosing-dev-environment" >Choose a Dev Environment</option>
+                    
+                    <option value="/docs/containers/reference" >Customize</option>
+                    
+                    <option value="/docs/containers/bridge-to-kubernetes" >Develop with Kubernetes</option>
+                    
+                    <option value="/docs/containers/troubleshooting" >Tips and Tricks</option>
+                    
+              </optgroup>
+              
+              <optgroup label="Data Science">
+            
+                    <option value="/docs/datascience/overview" >Overview</option>
+                    
+                    <option value="/docs/datascience/jupyter-notebooks" >Jupyter Notebooks</option>
+                    
+                    <option value="/docs/datascience/data-science-tutorial" >Data Science Tutorial</option>
+                    
+                    <option value="/docs/datascience/python-interactive" >Python Interactive</option>
+                    
+                    <option value="/docs/datascience/data-wrangler-quick-start" >Data Wrangler Quick Start</option>
+                    
+                    <option value="/docs/datascience/data-wrangler" >Data Wrangler</option>
+                    
+                    <option value="/docs/datascience/pytorch-support" >PyTorch Support</option>
+                    
+                    <option value="/docs/datascience/azure-machine-learning" >Azure Machine Learning</option>
+                    
+                    <option value="/docs/datascience/jupyter-kernel-management" >Manage Jupyter Kernels</option>
+                    
+                    <option value="/docs/datascience/notebooks-web" >Jupyter Notebooks on the Web</option>
+                    
+                    <option value="/docs/datascience/microsoft-fabric-quickstart" >Data Science in Microsoft Fabric</option>
+                    
+              </optgroup>
+              
+              <optgroup label="Intelligent Apps">
+            
+                    <option value="/docs/intelligentapps/overview" >Foundry Toolkit Overview</option>
+                    
+                    <option value="/docs/intelligentapps/copilot-tools" >Foundry Toolkit Copilot Tools</option>
+                    
+                    <option value="/docs/intelligentapps/create-agents" >Create Agents</option>
+                    
+                    <option value="/docs/intelligentapps/models" >Models</option>
+                    
+                    <option value="/docs/intelligentapps/playground" >Playground</option>
+                    
+                    <option value="/docs/intelligentapps/agentbuilder" >Agent Builder</option>
+                    
+                    <option value="/docs/intelligentapps/agent-inspector" >Agent Inspector</option>
+                    
+                    <option value="/docs/intelligentapps/hosted-agents" >Hosted Agents (Preview)</option>
+                    
+                    <option value="/docs/intelligentapps/evaluation" >Evaluation</option>
+                    
+                    <option value="/docs/intelligentapps/tool-catalog" >Tool Catalog</option>
+                    
+                    <option value="/docs/intelligentapps/finetune" >Fine-Tuning (Automated Setup)</option>
+                    
+                    <option value="/docs/intelligentapps/finetune-legacy" >Fine-Tuning (Project Template)</option>
+                    
+                    <option value="/docs/intelligentapps/modelconversion" >Model Conversion</option>
+                    
+                    <option value="/docs/intelligentapps/tracing" >Tracing</option>
+                    
+                    <option value="/docs/intelligentapps/profiling" >Profiling (Windows ML)</option>
+                    
+                    <option value="/docs/intelligentapps/faq" >FAQ</option>
+                    
+                    <option disabled>Reference</option>
+            
+                    <option value="/docs/intelligentapps/reference/FileStructure" >    File Structure</option>
+                    
+                    <option value="/docs/intelligentapps/reference/ManualModelConversion" >    Manual Model Conversion</option>
+                    
+                    <option value="/docs/intelligentapps/reference/ManualConversionOnGPU" >    Manual Model Conversion on GPU</option>
+                    
+                    <option value="/docs/intelligentapps/reference/SetupWithoutAITK" >    Setup Environment Without Foundry Toolkit</option>
+                    
+                    <option value="/docs/intelligentapps/reference/UpdateModelProject" >    Update Project</option>
+                    
+                    <option value="/docs/intelligentapps/reference/TemplateProject" >    Template Project</option>
+                    
+                    <option value="/docs/intelligentapps/reference/migrate-from-visualizer" >    Migrating from Visualizer to Agent Inspector</option>
+                    
+              </optgroup>
+              
+              <optgroup label="Azure">
+            
+                    <option value="/docs/azure/overview" >Overview</option>
+                    
+                    <option value="/docs/azure/gettingstarted" >Getting Started</option>
+                    
+                    <option value="/docs/azure/resourcesextension" >Resources View</option>
+                    
+                    <option value="/docs/azure/deployment" >Deployment</option>
+                    
+                    <option value="/docs/azure/vscodeforweb" >VS Code for the Web - Azure</option>
+                    
+                    <option value="/docs/azure/containers" >Containers</option>
+                    
+                    <option value="/docs/azure/aksextensions" >Azure Kubernetes Service</option>
+                    
+                    <option value="/docs/azure/kubernetes" >Kubernetes</option>
+                    
+                    <option value="/docs/azure/mongodb" >MongoDB</option>
+                    
+                    <option value="/docs/azure/remote-debugging" >Remote Debugging for Node.js</option>
+                    
+              </optgroup>
+              
+              <optgroup label="Dev Containers">
+            
+                    <option value="/docs/devcontainers/containers" selected>Overview</option>
+                    
+                    <option value="/docs/devcontainers/tutorial" >Tutorial</option>
+                    
+                    <option value="/docs/devcontainers/attach-container" >Attach to Container</option>
+                    
+                    <option value="/docs/devcontainers/create-dev-container" >Create Dev Container</option>
+                    
+                    <option value="/docs/devcontainers/containers-advanced" >Advanced Containers</option>
+                    
+                    <option value="/docs/devcontainers/devcontainerjson-reference" >devcontainer.json</option>
+                    
+                    <option value="/docs/devcontainers/devcontainer-cli" >Dev Container CLI</option>
+                    
+                    <option value="/docs/devcontainers/tips-and-tricks" >Tips and Tricks</option>
+                    
+                    <option value="/docs/devcontainers/faq" >FAQ</option>
+                    
+              </optgroup>
+              
+              </select>
+            </nav>        </aside>
+        
+        <!-- Content wrapper contains main content + right sidebar -->
+        <div class="docs-content-wrapper">
+            <!-- Right sidebar - On This Page -->
+            <aside class="docs-right-sidebar hidden-xs">
+                <div class="docs-markdown-actions">
+                    <div class="docs-markdown-dropdown" data-raw-url="/raw/docs/devcontainers/containers.md">
+                        <button type="button" class="docs-markdown-btn-main" data-action="copy-markdown" aria-label="Copy as Markdown">
+                            <span class="codicon codicon-copy" aria-hidden="true"></span>
+                            <span>Copy as Markdown</span>
+                        </button>
+                        <button type="button" class="docs-markdown-btn-trigger" aria-haspopup="true" aria-expanded="false" aria-label="More Markdown options">
+                            <span class="codicon codicon-chevron-down docs-markdown-chevron" aria-hidden="true"></span>
+                        </button>
+                        <ul class="docs-markdown-menu" role="menu" aria-label="Markdown options">
+                            <li role="menuitem" tabindex="0" data-action="copy-markdown">
+                                <span class="codicon codicon-copy" aria-hidden="true"></span>
+                                <span>Copy as Markdown</span>
+                            </li>
+                            <li role="menuitem" tabindex="0" data-action="view-markdown">
+                                <span class="codicon codicon-file" aria-hidden="true"></span>
+                                <span>View as Markdown</span>
+                                <span class="codicon codicon-link-external" aria-hidden="true"></span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <nav id="docs-subnavbar" aria-label="On Page">
+                    
+                    <h4><span class="sr-only">On this page there are 23 sections</span><span
+                            aria-hidden="true">On this page</span></h4>
+                    <ul class="nav">
+                        
+                        <li><a href="#_getting-started">Getting started</a></li>
+                        
+                        <li><a href="#_picking-your-quick-start">Picking your quick start</a></li>
+                        
+                        <li><a href="#_quick-start-try-a-development-container">Quick start: Try a development container</a></li>
+                        
+                        <li><a href="#_quick-start-open-an-existing-folder-in-a-container">Quick start: Open an existing folder in a container</a></li>
+                        
+                        <li><a href="#_quick-start-open-a-git-repository-or-github-pr-in-an-isolated-container-volume">Quick start: Open a Git repository or GitHub PR in an isolated container volume</a></li>
+                        
+                        <li><a href="#_trusting-your-workspace">Trusting your Workspace</a></li>
+                        
+                        <li><a href="#_create-a-devcontainerjson-file">Create a devcontainer.json file</a></li>
+                        
+                        <li><a href="#_dev-container-features">Dev Container Features</a></li>
+                        
+                        <li><a href="#_pre-building-dev-container-images">Pre-building dev container images</a></li>
+                        
+                        <li><a href="#_inspecting-volumes">Inspecting volumes</a></li>
+                        
+                        <li><a href="#_managing-extensions">Managing extensions</a></li>
+                        
+                        <li><a href="#_forwarding-or-publishing-a-port">Forwarding or publishing a port</a></li>
+                        
+                        <li><a href="#_opening-a-terminal">Opening a terminal</a></li>
+                        
+                        <li><a href="#_debugging-in-a-container">Debugging in a container</a></li>
+                        
+                        <li><a href="#_container-specific-settings">Container specific settings</a></li>
+                        
+                        <li><a href="#_managing-containers">Managing containers</a></li>
+                        
+                        <li><a href="#_personalizing-with-dotfile-repositories">Personalizing with dotfile repositories</a></li>
+                        
+                        <li><a href="#_known-limitations">Known limitations</a></li>
+                        
+                        <li><a href="#_advanced-container-configuration">Advanced container configuration</a></li>
+                        
+                        <li><a href="#_devcontainerjson-reference">devcontainer.json reference</a></li>
+                        
+                        <li><a href="#_questions-or-feedback">Questions or feedback</a></li>
+                        
+                        <li><a href="#_troubleshooting">Troubleshooting</a></li>
+                        
+                        <li><a href="#_next-steps">Next steps</a></li>
+                        
+                    </ul>
+                    
+                </nav>
+                
+            </aside>
+            
+            <!-- Main article content -->
+            <main class="docs-main-content body">
+                <h1>Developing inside a Container</h1>
+<p>The <strong>Visual Studio Code Dev Containers</strong> extension lets you use a container as a full-featured development environment. It allows you to open any folder inside (or mounted into) a container and take advantage of Visual Studio Code's full feature set. A <a href="#_create-a-devcontainerjson-file">devcontainer.json file</a> in your project tells VS Code how to access (or create) a <strong>development container</strong> with a well-defined tool and runtime stack. This container can be used to run an application or to separate tools, libraries, or runtimes needed for working with a codebase.</p>
+<p>Workspace files are mounted from the local file system or copied or cloned into the container. Extensions are installed and run inside the container, where they have full access to the tools, platform, and file system. This means that you can seamlessly switch your entire development environment just by connecting to a different container.</p>
+<p><img src="/assets/docs/devcontainers/containers/architecture-containers.png" alt="Container Architecture" loading="lazy"></p>
+<p>This lets VS Code provide a <strong>local-quality development experience</strong> including full IntelliSense (completions), code navigation, and debugging <strong>regardless of where your tools (or code) are located</strong>.</p>
+<p>The Dev Containers extension supports two primary operating models:</p>
+<ul>
+<li>You can use a container as your full-time development environment</li>
+<li>You can <a href="/docs/devcontainers/attach-container">attach to a running container</a> to inspect it.</li>
+</ul>
+<blockquote><p><strong>Note</strong>: The Dev Containers extension supports the open Dev Containers Specification, which empowers anyone in any tool to configure a consistent dev environment. You can learn more in our <a href="/docs/devcontainers/faq#_can-i-use-dev-containers-outside-of-vs-code">dev container FAQ</a> and on the specification's site <a href="https://containers.dev/" class="external-link" target="_blank">containers.dev</a>.</p>
+</blockquote><h2 id="_getting-started" data-needslink="_getting-started">Getting started</h2>
+<blockquote><p><strong>Note</strong>: You can learn how to get up-and-running quickly with dev containers in the introductory <a href="/docs/devcontainers/tutorial">Dev Containers tutorial</a>.</p>
+</blockquote><h3 id="_system-requirements" data-needslink="_system-requirements">System requirements</h3>
+<p><strong>Local / Remote Host:</strong></p>
+<p>You can use Docker with the Dev Containers extension in a few ways, including:</p>
+<ul>
+<li>Docker installed locally.</li>
+<li>Docker installed on a remote environment.</li>
+<li>Other Docker compliant CLIs, installed locally or remotely.
+<ul>
+<li>While other CLIs may work, they are not officially supported. Note that <a href="/docs/devcontainers/attach-container#_attach-to-a-container-in-a-kubernetes-cluster">attaching to a Kubernetes cluster</a> only requires a properly configured <a href="https://kubernetes.io/docs/reference/kubectl/overview/" class="external-link" target="_blank">kubectl CLI</a>.</li>
+</ul>
+</li>
+</ul>
+<p>You can learn more in the <a href="/remote/advancedcontainers/docker-options">alternative Docker options doc</a>.</p>
+<p>Below are some specific ways you can configure Docker on a local or remote host:</p>
+<ul>
+<li><strong>Windows:</strong> <a href="https://www.docker.com/products/docker-desktop" class="external-link" target="_blank">Docker Desktop</a> 2.0+ on Windows 10 Pro/Enterprise. Windows 10 Home (2004+) requires Docker Desktop 2.3+ and the <a href="https://aka.ms/vscode-remote/containers/docker-wsl2" class="external-link" target="_blank">WSL 2 back-end</a>. (Docker Toolbox is not supported. Windows container images are not supported.)</li>
+<li><strong>macOS</strong>:  <a href="https://www.docker.com/products/docker-desktop" class="external-link" target="_blank">Docker Desktop</a> 2.0+.</li>
+<li><strong>Linux</strong>: <a href="https://docs.docker.com/install/#supported-platforms" class="external-link" target="_blank">Docker CE/EE</a> 18.06+ and <a href="https://docs.docker.com/compose/install" class="external-link" target="_blank">Docker Compose</a> 1.21+. (The Ubuntu snap package is not supported.)</li>
+<li><strong>Remote hosts:</strong> 1 GB RAM is required, but at least 2 GB RAM and a 2-core CPU is recommended.</li>
+</ul>
+<p><strong>Containers</strong>:</p>
+<ul>
+<li>x86_64 / ARMv7l (AArch32) / ARMv8l (AArch64) Debian 9+, Ubuntu 16.04+, CentOS / RHEL 7+</li>
+<li>x86_64 Alpine Linux 3.9+</li>
+</ul>
+<p>Other <code>glibc</code> based Linux containers may work if they have <a href="/docs/remote/linux">needed Linux prerequisites</a>.</p>
+<h3 id="_installation" data-needslink="_installation">Installation</h3>
+<p>To get started, follow these steps:</p>
+<ol>
+<li>
+<p>Install and configure <a href="https://www.docker.com/get-started" class="external-link" target="_blank">Docker</a> for your operating system, using one of the paths below or an <a href="/remote/advancedcontainers/docker-options">alternative Docker option</a>, like Docker on a remote host or Docker compliant CLI.</p>
+<p><strong>Windows / macOS</strong>:</p>
+<ol>
+<li>
+<p>Install <a href="https://www.docker.com/products/docker-desktop" class="external-link" target="_blank">Docker Desktop for Windows/Mac</a>.</p>
+</li>
+<li>
+<p>If you are using WSL 2 on Windows, to ensure the <a href="https://aka.ms/vscode-remote/containers/docker-wsl2" class="external-link" target="_blank">WSL 2 back-end</a> is enabled: Right-click on the Docker taskbar item and select <strong>Settings</strong>. Check <strong>Use the WSL 2 based engine</strong> and verify your distribution is enabled under <strong>Resources &gt; WSL Integration</strong>.</p>
+</li>
+<li>
+<p>When not using the WSL 2 back-end, right-click on the Docker task bar item, select <strong>Settings</strong> and update <strong>Resources &gt; File Sharing</strong> with any locations your source code is kept. See <a href="/docs/devcontainers/tips-and-tricks">tips and tricks</a> for troubleshooting.</p>
+</li>
+</ol>
+<p><strong>Linux</strong>:</p>
+<ol>
+<li>
+<p>Follow the <a href="https://docs.docker.com/install/#supported-platforms" class="external-link" target="_blank">official install instructions for Docker CE/EE for your distribution</a>. If you are using Docker Compose, follow the <a href="https://docs.docker.com/compose/install/" class="external-link" target="_blank">Docker Compose directions</a> as well.</p>
+</li>
+<li>
+<p>Add your user to the <code>docker</code> group by using a terminal to run: <code>sudo usermod -aG docker $USER</code></p>
+</li>
+<li>
+<p>Sign out and back in again so your changes take effect.</p>
+</li>
+</ol>
+</li>
+<li>
+<p>Install <a href="https://code.visualstudio.com/">Visual Studio Code</a> or <a href="https://code.visualstudio.com/insiders/">Visual Studio Code Insiders</a>.</p>
+</li>
+<li>
+<p>Install the <a href="https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers" class="external-link" target="_blank">Dev Containers extension</a>. If you plan to work with other remote extensions in VS Code, you may choose to install the <a href="https://aka.ms/vscode-remote/download/extension" class="external-link" target="_blank">Remote Development extension pack</a>.</p>
+</li>
+</ol>
+<h3 id="_working-with-git" data-needslink="_working-with-git">Working with Git?</h3>
+<p>Here are two tips to consider:</p>
+<ul>
+<li>If you are working with the same repository both locally in Windows and inside a container, be sure to set up consistent line endings. See <a href="/docs/remote/troubleshooting#_resolving-git-line-ending-issues-in-wsl-resulting-in-many-modified-files">tips and tricks</a> for details.</li>
+<li>If you clone using a Git credential manager, your container should already have access to your credentials! If you use SSH keys, you can also opt in to sharing them. See <a href="/remote/advancedcontainers/sharing-git-credentials">Sharing Git credentials with your container</a> for details.</li>
+</ul>
+<h2 id="_picking-your-quick-start" data-needslink="_picking-your-quick-start">Picking your quick start</h2>
+<p>This document includes 3 quick starts - we recommend starting with the one that fits your workflow and interests the best:</p>
+<ol>
+<li>Want to try out a dev container in a quick sample repo? Check out <a href="#_quick-start-try-a-development-container">Quick start 1: Try a development container</a>.</li>
+<li>Want to add a dev container to one of your existing locally cloned projects? Check out <a href="#_quick-start-open-an-existing-folder-in-a-container">Quick start 2: Open an existing folder in a container</a>.</li>
+<li>Want to work with an isolated copy of a repo, i.e. to review a PR or investigate a branch without impacting your local work? Check out <a href="#_quick-start-open-a-git-repository-or-github-pr-in-an-isolated-container-volume">Quick start 3: Open a git repo or PR in an isolated container volume</a>.</li>
+</ol>
+<h2 id="_quick-start-try-a-development-container" data-needslink="_quick-start-try-a-development-container">Quick start: Try a development container</h2>
+<p>The easiest way to get started is to try one of the sample development containers. The <a href="/docs/devcontainers/tutorial">Containers tutorial</a> will walk you through setting up Docker and the Dev Containers extension and let you select a sample:</p>
+<p><img src="/assets/docs/devcontainers/containers/select-a-sample.png" alt="Select a sample from the list" loading="lazy"></p>
+<blockquote><p>Note: If you already have VS Code and Docker installed, then you may use <a href="https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/microsoft/vscode-remote-try-python" class="external-link" target="_blank">open in dev container</a>. You can learn more about this and how to add it to your repos in the <a href="/docs/devcontainers/create-dev-container#_add-configuration-files-to-a-repository">create a dev container guide</a>.</p>
+</blockquote><h2 id="_quick-start-open-an-existing-folder-in-a-container" data-needslink="_quick-start-open-an-existing-folder-in-a-container">Quick start: Open an existing folder in a container</h2>
+<p>This quick start covers how to set up a dev container for an existing project to use as your full-time development environment using existing source code on your filesystem. Follow these steps:</p>
+<ol>
+<li>
+<p>Start VS Code, run the <strong>Dev Containers: Open Folder in Container...</strong> command from the Command Palette (<span class="keybinding">F1</span>) or quick actions Status bar item, and select the project folder you would like to set up the container for.</p>
+<blockquote><p><strong>Tip:</strong> If you want to edit the container's contents or settings before opening the folder, you can run <strong>Dev Containers: Add Dev Container Configuration Files...</strong> instead.</p>
+</blockquote><p><img src="/assets/docs/devcontainers/containers/remote-dev-status-bar.png" alt="Quick actions Status bar item" loading="lazy"></p>
+</li>
+<li>
+<p>Now pick a starting point for your dev container. You can either select a base <strong>Dev Container Template</strong> from a filterable list, or use an existing <a href="https://docs.docker.com/engine/reference/builder/" class="external-link" target="_blank">Dockerfile</a> or <a href="https://docs.docker.com/compose/compose-file/#compose-file-structure-and-examples" class="external-link" target="_blank">Docker Compose file</a> if one exists in the folder you selected.</p>
+<blockquote><p><strong>Note:</strong> When using Alpine Linux containers, some extensions may not work due to <code>glibc</code> dependencies in native code inside the extension.</p>
+</blockquote><p><img src="/assets/docs/devcontainers/containers/select-dev-container-def.png" alt="Select a node Dev Container Template" loading="lazy"></p>
+<p>The list will be automatically sorted based on the contents of the folder you open.</p>
+<p>You may be able to customize your dev container with additional Features, which <a href="#_dev-container-features">you can read more about below</a>.</p>
+<p>The dev container Templates displayed come from our <a href="https://containers.dev/templates" class="external-link" target="_blank">first-party and community index</a>, which is part of the <a href="https://containers.dev/" class="external-link" target="_blank">Dev Container Specification</a>. We host a set of Templates as part of the spec in the <a href="https://github.com/devcontainers/templates" class="external-link" target="_blank">devcontainers/templates repository</a>. You can browse the <code>src</code> folder of that repository to see the contents of each Template.</p>
+<p>You can also choose to publish and distribute your own dev container Templates using the <a href="https://containers.dev/implementors/templates-distribution/" class="external-link" target="_blank">dev container CLI</a>.</p>
+</li>
+<li>
+<p>After picking the starting point for your container, VS Code will add the dev container configuration files to your project (<code>.devcontainer/devcontainer.json</code>).</p>
+</li>
+<li>
+<p>The VS Code window will reload and start building the dev container. A progress notification provides status updates. You only have to build a dev container the first time you open it; opening the folder after the first successful build will be much quicker.</p>
+<p><img src="/assets/docs/devcontainers/containers/dev-container-progress.png" alt="Dev Container Progress Notification" loading="lazy"></p>
+</li>
+<li>
+<p>After the build completes, VS Code will automatically connect to the container.</p>
+</li>
+</ol>
+<p>You can now interact with your project in VS Code just as you could when opening the project locally. From now on, when you open the project folder, VS Code will automatically pick up and reuse your dev container configuration.</p>
+<blockquote><p><strong>Tip:</strong> Want to use a remote Docker host? See the section on <a href="#_open-a-folder-on-a-remote-ssh-host-in-a-container">opening a folder on a remote SSH host in a container</a> for information.</p>
+</blockquote><p>While using this approach to <a href="https://docs.docker.com/storage/bind-mounts/" class="external-link" target="_blank">bind mount</a> the local filesystem into a container is convenient, it does have some performance overhead on Windows and macOS. There are <a href="/remote/advancedcontainers/improve-performance">some techniques</a> that you can apply to improve disk performance, or you can <a href="#_quick-start-open-a-git-repository-or-github-pr-in-an-isolated-container-volume">open a repository in a container using an isolated container volume</a> instead.</p>
+<h3 id="_open-a-wsl-2-folder-in-a-container-on-windows" data-needslink="_open-a-wsl-2-folder-in-a-container-on-windows">Open a WSL 2 folder in a container on Windows</h3>
+<p>If you are using <a href="https://learn.microsoft.com/windows/wsl/wsl2-about" class="external-link" target="_blank">Windows Subsystem for Linux v2 (WSL 2)</a> and have enabled <a href="https://aka.ms/vscode-remote/containers/docker-wsl2" class="external-link" target="_blank">Docker Desktop's WSL 2 back-end</a>, you can work with source code stored inside WSL!</p>
+<p>Once the WSL 2 engine is enabled, you can either:</p>
+<ul>
+<li>Use the <strong>Dev Containers: Reopen in Container</strong> command from a folder already opened using the <a href="https://aka.ms/vscode-remote/download/wsl" class="external-link" target="_blank">WSL</a> extension.</li>
+<li>Select <strong>Dev Containers: Open Folder in Container...</strong> from the Command Palette (<span class="keybinding">F1</span>) and choose a WSL folder using the local <code>\\wsl$</code> share (from the Windows side).</li>
+</ul>
+<p>The rest of the quick start applies as-is! You can learn more about the <a href="/docs/remote/wsl">WSL extension in its documentation</a>.</p>
+<h3 id="_open-a-folder-on-a-remote-ssh-host-in-a-container" data-needslink="_open-a-folder-on-a-remote-ssh-host-in-a-container">Open a folder on a remote SSH host in a container</h3>
+<p>If you are using a Linux or macOS SSH host, you can use the <a href="/docs/remote/ssh">Remote - SSH</a> and Dev Containers extensions together. You do not even need to have a Docker client installed locally.</p>
+<p>To do so:</p>
+<ol>
+<li>Follow the <a href="/docs/remote/ssh#_installation">installation</a> and SSH <a href="/docs/remote/ssh#_ssh-host-setup">host setup</a> steps for the Remote - SSH extension.</li>
+<li><strong>Optional:</strong> Set up SSH <a href="/docs/remote/troubleshooting#_configuring-key-based-authentication">key based authentication</a> to the server so you do not need to enter your password multiple times.</li>
+<li><a href="#_installation">Install Docker</a> on your SSH host. You do not need to install Docker locally.</li>
+<li>Follow the <a href="/docs/remote/ssh#_connect-to-a-remote-host">quick start</a> for the Remote - SSH extension to connect to a host and open a folder there.</li>
+<li>Use the <strong>Dev Containers: Reopen in Container</strong> command from the Command Palette (<span class="keybinding">F1</span>, <span class="dynamic-keybinding" data-commandId="workbench.action.showCommands" data-osx="⇧⌘P" data-win="Ctrl+Shift+P" data-linux="Ctrl+Shift+P"><span class="keybinding">⇧⌘P</span> (Windows, Linux <span class="keybinding">Ctrl+Shift+P</span>)</span>).</li>
+</ol>
+<p>The rest of the Dev Containers quick start applies as-is. You can learn more about the <a href="/docs/remote/ssh">Remote - SSH extension in its documentation</a>. You can also see the <a href="/remote/advancedcontainers/develop-remote-host">Develop on a remote Docker host</a> article for other options if this model does not meet your needs.</p>
+<h3 id="_open-a-folder-on-a-remote-tunnel-host-in-a-container" data-needslink="_open-a-folder-on-a-remote-tunnel-host-in-a-container">Open a folder on a remote Tunnel host in a container</h3>
+<p>You can use the <a href="/docs/remote/tunnels">Remote - Tunnels</a> and Dev Containers extensions together to open a folder on your remote host inside of a container. You do not even need to have a Docker client installed locally. This is similar to the SSH host scenario above, but uses Remote - Tunnels instead.</p>
+<p>To do so:</p>
+<ol>
+<li>Follow the <a href="/docs/remote/tunnels#_getting-started">Getting Started</a> instructions for the Remote - Tunnels extension.</li>
+<li><a href="#_installation">Install Docker</a> on your tunnel host. You do not need to install Docker locally.</li>
+<li>Follow the <a href="/docs/remote/tunnels#_remote-tunnels-extension">steps</a> for the Remote - Tunnels extension to connect to a tunnel host and open a folder there.</li>
+<li>Use the <strong>Dev Containers: Reopen in Container</strong> command from the Command Palette (<span class="keybinding">F1</span>, <span class="dynamic-keybinding" data-commandId="workbench.action.showCommands" data-osx="⇧⌘P" data-win="Ctrl+Shift+P" data-linux="Ctrl+Shift+P"><span class="keybinding">⇧⌘P</span> (Windows, Linux <span class="keybinding">Ctrl+Shift+P</span>)</span>).</li>
+</ol>
+<p>The rest of the Dev Containers quick start applies as-is. You can learn more about the <a href="/docs/remote/tunnels">Remote - Tunnels extension in its documentation</a>. You can also see the <a href="/remote/advancedcontainers/develop-remote-host">Develop on a remote Docker host</a> article for other options if this model does not meet your needs.</p>
+<h3 id="_open-an-existing-workspace-in-a-container" data-needslink="_open-an-existing-workspace-in-a-container">Open an existing workspace in a container</h3>
+<p>You can also follow a similar process to open a <a href="/docs/editor/multi-root-workspaces">VS Code multi-root workspace</a> in a <strong>single container</strong> if the workspace only <strong>references relative paths to sub-folders of the folder the <code>.code-workspace</code> file is in (or the folder itself).</strong></p>
+<p>You can either:</p>
+<ul>
+<li>Use the <strong>Dev Containers: Open Workspace in Container...</strong> command.</li>
+<li>Use <strong>File &gt; Open Workspace...</strong> once you have opened a folder that contains a <code>.code-workspace</code> file in a container.</li>
+</ul>
+<p>Once connected, you may want to <strong>add the <code>.devcontainer</code> folder</strong> to the workspace so you can easily edit its contents if it is not already visible.</p>
+<p>Also note that, while you cannot use multiple containers for the same workspace in the same VS Code window, you can use <a href="/remote/advancedcontainers/connect-multiple-containers">multiple Docker Compose managed containers at once</a> from separate windows.</p>
+<h2 id="_quick-start-open-a-git-repository-or-github-pr-in-an-isolated-container-volume" data-needslink="_quick-start-open-a-git-repository-or-github-pr-in-an-isolated-container-volume">Quick start: Open a Git repository or GitHub PR in an isolated container volume</h2>
+<p>While you can <a href="#_quick-start-open-an-existing-folder-in-a-container">open a locally cloned repository in a container</a>, you may want to work with an isolated copy of a repository for a PR review or to investigate another branch without impacting your work.</p>
+<p>Repository Containers use isolated, local Docker volumes instead of binding to the local filesystem. In addition to not polluting your file tree, local volumes have the added benefit of improved performance on Windows and macOS. (See Advanced Configuration <a href="/remote/advancedcontainers/improve-performance">Improve disk performance</a> article for information on how to use these types of volumes in other scenarios.)</p>
+<p>For example, follow these steps to open one of the &quot;try&quot; repositories in a Repository Container:</p>
+<ol>
+<li>
+<p>Start VS Code and run <strong>Dev Containers: Clone Repository in Container Volume...</strong> from the Command Palette (<span class="keybinding">F1</span>).</p>
+</li>
+<li>
+<p>Enter <code>microsoft/vscode-remote-try-node</code> (or one of the other &quot;try&quot; repositories), a Git URI, a GitHub branch URL, or a GitHub PR URL in the input box that appears and press <span class="keybinding">Enter</span>.</p>
+<p><img src="/assets/docs/devcontainers/containers/vscode-remote-try-node.png" alt="Input box with a repository name in it" loading="lazy"></p>
+<blockquote><p><strong>Tip:</strong> If you choose a private repository, you may want to setup a credential manager or add your SSH keys to your SSH agent. See <a href="/remote/advancedcontainers/sharing-git-credentials">Sharing Git credentials with your container</a>.</p>
+</blockquote></li>
+<li>
+<p>If your repository does not have a <code>.devcontainer/devcontainer.json</code> file in it, you'll be asked to pick a starting point from a filterable list or an existing <a href="https://docs.docker.com/engine/reference/builder/" class="external-link" target="_blank">Dockerfile</a> or <a href="https://docs.docker.com/compose/compose-file/#compose-file-structure-and-examples" class="external-link" target="_blank">Docker Compose file</a> (if one exists).</p>
+<blockquote><p><strong>Note:</strong> When using Alpine Linux containers, some extensions may not work due to <code>glibc</code> dependencies in native code inside the extension.</p>
+</blockquote><p><img src="/assets/docs/devcontainers/containers/select-dev-container-def.png" alt="Select a node Dev Container Template" loading="lazy"></p>
+<p>The list will be automatically sorted based on the contents of the folder you open. The dev container Templates displayed come from our <a href="https://containers.dev/templates" class="external-link" target="_blank">first-party and community index</a>, which is part of the <a href="https://containers.dev/" class="external-link" target="_blank">Dev Container Specification</a>. We host a set of Templates as part of the spec in the <a href="https://github.com/devcontainers/templates" class="external-link" target="_blank">devcontainers/templates repository</a>. You can browse the <code>src</code> folder of that repository to see the contents of each Template.</p>
+</li>
+<li>
+<p>The VS Code window (instance) will reload, clone the source code, and start building the dev container. A progress notification provides status updates.</p>
+<p><img src="/assets/docs/devcontainers/containers/dev-container-progress.png" alt="Dev Container Progress Notification" loading="lazy"></p>
+<p>If you pasted in a GitHub pull request URL in step 2, the PR will be automatically checked out and the <a href="https://marketplace.visualstudio.com/items?itemName=GitHub.vscode-pull-request-github" class="external-link" target="_blank">GitHub Pull Requests</a> extension will be installed in the container. The extension provides additional PR related features like a PR explorer, interacting with PR comments inline, and status bar visibility.</p>
+<p><img src="/assets/docs/devcontainers/containers/checkout-pr-status.png" alt="PR status in status bar" loading="lazy"></p>
+</li>
+<li>
+<p>After the build completes, VS Code will automatically connect to the container. You can now work with the repository source code in this independent environment as you would if you had cloned the code locally.</p>
+</li>
+</ol>
+<p>Note that if the container fails to come up due to something like a Docker build error, you can select <strong>Reopen in Recovery Container</strong> in the dialog that appears to go into a &quot;recovery container&quot; that allows you to edit your Dockerfile or other content. This opens the docker volume with the cloned repository in a minimal container and shows you the creation log. Once you are done fixing, use <strong>Reopen in Container</strong> to retry.</p>
+<blockquote><p><strong>Tip:</strong> Want to use a remote Docker host? See the section on <a href="#_open-a-folder-on-a-remote-ssh-host-in-a-container">opening a folder on a remote SSH host in a container</a> for information.</p>
+</blockquote><h2 id="_trusting-your-workspace" data-needslink="_trusting-your-workspace">Trusting your Workspace</h2>
+<p>Visual Studio Code takes security seriously and wants to help you safely browse and edit code no matter the source or original authors. The <a href="/docs/editing/workspaces/workspace-trust">Workspace Trust feature</a> lets you decide whether your project folders should allow or restrict automatic code execution.</p>
+<p>The Dev Containers extension has adopted Workspace Trust. Depending on how you open and interact with your source code, you'll be prompted to decide if you trust the code you're editing or executing at different points.</p>
+<h3 id="_reopen-folder-in-container" data-needslink="_reopen-folder-in-container">Reopen folder in container</h3>
+<p><a href="#_quick-start-open-an-existing-folder-in-a-container">Setting up a dev container for an existing project</a> requires trusting the local (or WSL) folder. You will be asked to trust the local (or WSL) folder before the window reloads.</p>
+<p>There are a couple of exceptions to this flow:</p>
+<ol>
+<li>When clicking on a recent entry.</li>
+<li>Using the <strong>Open Folder in Container</strong> command will ask for trust after the window reloads, if trust is not already given.</li>
+</ol>
+<h3 id="_attach-to-existing-container" data-needslink="_attach-to-existing-container">Attach to existing container</h3>
+<p>When <a href="/docs/devcontainers/attach-container">attaching to an existing container</a>, you will be asked to confirm that attaching means you trust the container. This is only confirmed once.</p>
+<p><img src="/assets/docs/devcontainers/containers/attach-containers-trust.png" alt="Workspace trust prompt when attaching to container" loading="lazy"></p>
+<h3 id="_clone-repository-in-a-volume" data-needslink="_clone-repository-in-a-volume">Clone repository in a volume</h3>
+<p>When <a href="#_quick-start-open-a-git-repository-or-github-pr-in-an-isolated-container-volume">cloning a repository in a container volume</a>, you are asked to confirm that cloning a repository means you trust the repository. This is only confirmed once.</p>
+<p><img src="/assets/docs/devcontainers/containers/clone-containers-trust.png" alt="Workspace trust prompt when cloning in container volume" loading="lazy"></p>
+<h3 id="_inspect-volume" data-needslink="_inspect-volume">Inspect volume</h3>
+<p><a href="#_inspecting-volumes">Inspecting a volume</a> starts in <a href="/docs/editing/workspaces/workspace-trust#_restricted-mode">Restricted Mode</a>, and you can trust the folder inside the container.</p>
+<h3 id="_docker-daemon-running-remotely" data-needslink="_docker-daemon-running-remotely">Docker daemon running remotely</h3>
+<p>This implies trusting <a href="/remote/advancedcontainers/develop-remote-host">the machine the Docker daemon runs on</a>. There are no additional prompts to confirm (only those listed for the local/WSL case above).</p>
+<h2 id="_create-a-devcontainerjson-file" data-needslink="_create-a-devcontainerjson-file">Create a devcontainer.json file</h2>
+<p>VS Code's container configuration is stored in a <a href="https://containers.dev/implementors/json_reference" class="external-link" target="_blank">devcontainer.json</a> file. This file is similar to the <code>launch.json</code> file for debugging configurations, but is used for launching (or attaching to) your development container instead. You can also specify any extensions to install once the container is running or post-create commands to prepare the environment. The dev container configuration is either located under <code>.devcontainer/devcontainer.json</code> or stored as a <code>.devcontainer.json</code> file (note the dot-prefix) in the root of your project.</p>
+<p>Selecting the <strong>Dev Containers: Add Dev Container Configuration Files...</strong> command from the Command Palette (<span class="keybinding">F1</span>) will add the needed files to your project as a starting point, which you can further customize for your needs. The command lets you pick a pre-defined container configuration from a list based on your folder's contents, reuse an existing Dockerfile, or reuse an existing Docker Compose file.</p>
+<p><img src="/assets/docs/devcontainers/containers/select-dev-container-def.png" alt="Select a node Dev Container Template" loading="lazy"></p>
+<p>You can also create a devcontainer.json by hand and use any image, Dockerfile, or set of Docker Compose files as a starting point. Here is a simple example that uses one of the pre-built <a href="https://github.com/devcontainers/images/tree/main/src/typescript-node" class="external-link" target="_blank">Development Container images</a>:</p>
+<pre class="shiki" data-lang="json" shiki-themes dark-plus light-plus" style="--shiki-dark:#D4D4D4;--shiki-light:#000000;--shiki-dark-bg:#1E1E1E;--shiki-light-bg:#FFFFFF" tabindex="0"><code><span class="line"><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">{</span></span>
+<span class="line"><span style="--shiki-dark:#9CDCFE;--shiki-light:#0451A5">  "image"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">: </span><span style="--shiki-dark:#CE9178;--shiki-light:#A31515">"mcr.microsoft.com/devcontainers/typescript-node"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">,</span></span>
+<span class="line"><span style="--shiki-dark:#9CDCFE;--shiki-light:#0451A5">  "forwardPorts"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">: [</span><span style="--shiki-dark:#B5CEA8;--shiki-light:#098658">3000</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">],</span></span>
+<span class="line"><span style="--shiki-dark:#9CDCFE;--shiki-light:#0451A5">  "customizations"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">: {</span></span>
+<span class="line"><span style="--shiki-dark:#6A9955;--shiki-light:#008000">    // Configure properties specific to VS Code.</span></span>
+<span class="line"><span style="--shiki-dark:#9CDCFE;--shiki-light:#0451A5">    "vscode"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">: {</span></span>
+<span class="line"><span style="--shiki-dark:#6A9955;--shiki-light:#008000">      // Add the IDs of extensions you want installed when the container is created.</span></span>
+<span class="line"><span style="--shiki-dark:#9CDCFE;--shiki-light:#0451A5">      "extensions"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">: [</span><span style="--shiki-dark:#CE9178;--shiki-light:#A31515">"streetsidesoftware.code-spell-checker"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">]</span></span>
+<span class="line"><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">    }</span></span>
+<span class="line"><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">  }</span></span>
+<span class="line"><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">}</span></span>
+<span class="line"></span></code></pre>
+<blockquote><p><strong>Note:</strong> Additional configuration will already be added to the container based on what's in the base image. For example, we add the <code>streetsidesoftware.code-spell-checker</code> extension above, and the container will also include <code>&quot;dbaeumer.vscode-eslint&quot;</code> as <a href="https://github.com/devcontainers/images/blob/main/src/javascript-node/.devcontainer/devcontainer.json#L27" class="external-link" target="_blank">that's part of <code>mcr.microsoft.com/devcontainers/typescript-node</code></a>. This happens automatically when pre-building using <code>devcontainer.json</code>, which you may read more about in the <a href="#_pre-building-dev-container-images">pre-build section</a>.</p>
+</blockquote><p>To learn more about creating <code>devcontainer.json</code> files, see <a href="/docs/devcontainers/create-dev-container">Create a Development Container</a>.</p>
+<h2 id="_dev-container-features" data-needslink="_dev-container-features">Dev Container Features</h2>
+<p>Development container &quot;Features&quot; are self-contained, shareable units of installation code and dev container configuration. The name comes from the idea that referencing one of them allows you to quickly and easily add more tooling, runtime, or library &quot;Features&quot; into your development container for use by you or your collaborators.</p>
+<p>When you use <strong>Dev Containers: Add Dev Container Configuration Files</strong>, you're presented a list of scripts to customize the existing dev container configurations, such as installing Git or the Azure CLI:</p>
+<p><img src="/assets/docs/devcontainers/containers/container-features.png" alt="Dev container Features list drop down" loading="lazy"></p>
+<p>When you rebuild and reopen in your container, the Features you selected will be available in your <code>devcontainer.json</code>:</p>
+<pre class="shiki" data-lang="json" shiki-themes dark-plus light-plus" style="--shiki-dark:#D4D4D4;--shiki-light:#000000;--shiki-dark-bg:#1E1E1E;--shiki-light-bg:#FFFFFF" tabindex="0"><code><span class="line"><span style="--shiki-dark:#CE9178;--shiki-light:#A31515">"features"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">: {</span></span>
+<span class="line"><span style="--shiki-dark:#9CDCFE;--shiki-light:#0451A5">    "ghcr.io/devcontainers/features/github-cli:1"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">: {</span></span>
+<span class="line"><span style="--shiki-dark:#9CDCFE;--shiki-light:#0451A5">        "version"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">: </span><span style="--shiki-dark:#CE9178;--shiki-light:#A31515">"latest"</span></span>
+<span class="line"><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">    }</span></span>
+<span class="line"><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">}</span></span>
+<span class="line"></span></code></pre>
+<p>You'll get IntelliSense when editing the <code>&quot;features&quot;</code> property in the <code>devcontainer.json</code> directly:</p>
+<p><img src="/assets/docs/devcontainers/containers/features-intellisense.png" alt="Intellisense when modifying terraform Feature" loading="lazy"></p>
+<p>The <strong>Dev Containers: Configure Container Features</strong> command allows you to update an existing configuration.</p>
+<p>The Features sourced in VS Code UI now come from a central index, which you can also contribute to. See the <a href="https://containers.dev/features" class="external-link" target="_blank">Dev Containers specification site</a> for the current list, and to <a href="https://containers.dev/implementors/features-distribution/" class="external-link" target="_blank">learn how to publish and distribute Features</a>.</p>
+<h3 id="_always-installed-features" data-needslink="_always-installed-features">&quot;Always installed&quot; Features</h3>
+<p>Similar to how you can <a href="#_always-installed-extensions">set extensions to always be installed</a> in your dev container, you can use the <span class="setting"><span class="setting-dropdown" data-setting-id="dev.containers.defaultFeatures">
+    <span class="setting-link-main">
+      <span class="codicon codicon-settings-gear dynamic-setting-icon"></span>
+      dev.containers.defaultFeatures
+      
+    </span>
+    <button 
+      type="button"
+      class="setting-dropdown-trigger"
+      aria-haspopup="menu"
+      aria-expanded="false"
+      aria-label="Open setting in VS Code">
+        <svg class="setting-dropdown-chevron" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+        <path d="M7.976 10.072l4.357-4.357.62.618L8.284 11h-.618L3 6.333l.619-.618 4.357 4.357z"/>
+        </svg>
+    </button>
+    <span class="setting-dropdown-menu" role="menu" aria-label="Open setting">
+      <span role="menuitem" class="setting-action-item" data-version="stable" tabindex="0">Open in VS Code</span>
+      <span role="menuitem" class="setting-action-item" data-version="insiders" tabindex="-1">Open in VS Code Insiders</span>
+    </span>
+  </span></span> User <a href="/docs/configure/settings">setting</a> to set Features you'd always like installed:</p>
+<pre class="shiki" data-lang="json" shiki-themes dark-plus light-plus" style="--shiki-dark:#D4D4D4;--shiki-light:#000000;--shiki-dark-bg:#1E1E1E;--shiki-light-bg:#FFFFFF" tabindex="0"><code><span class="line"><span style="--shiki-dark:#CE9178;--shiki-light:#A31515">"dev.containers.defaultFeatures"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">: {</span></span>
+<span class="line"><span style="--shiki-dark:#9CDCFE;--shiki-light:#0451A5">    "ghcr.io/devcontainers/features/github-cli:1"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">: {}</span></span>
+<span class="line"><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">},</span></span>
+<span class="line"></span></code></pre>
+<h3 id="_creating-your-own-feature" data-needslink="_creating-your-own-feature">Creating your own Feature</h3>
+<p>It's also easy to create and publish your own Dev Container Features. Published Features can be stored and shared as <a href="https://github.com/opencontainers/artifacts" class="external-link" target="_blank">OCI Artifacts</a> from any supporting public or private container registry. You can see the list of current published Features on <a href="https://containers.dev/features" class="external-link" target="_blank">containers.dev</a>.</p>
+<p>A Feature is a self contained entity in a folder with at least a <code>devcontainer-feature.json</code> and <code>install.sh</code> entrypoint script:</p>
+<pre class="shiki" data-lang="text" shiki-themes dark-plus light-plus" style="--shiki-dark:#D4D4D4;--shiki-light:#000000;--shiki-dark-bg:#1E1E1E;--shiki-light-bg:#FFFFFF" tabindex="0"><code><span class="line"><span>+-- feature</span></span>
+<span class="line"><span>|    +-- devcontainer-feature.json</span></span>
+<span class="line"><span>|    +-- install.sh</span></span>
+<span class="line"><span>|    +-- (other files)</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>Check out the <a href="https://github.com/devcontainers/feature-starter" class="external-link" target="_blank">feature/starter</a> repository for instructions on using the dev container CLI to publish your own public or private Features.</p>
+<h3 id="_features-specification-and-distribution" data-needslink="_features-specification-and-distribution">Features specification and distribution</h3>
+<p>Features are a key part of the open-source <a href="https://containers.dev" class="external-link" target="_blank">Development Containers Specification</a>. You can review <a href="https://containers.dev/implementors/features" class="external-link" target="_blank">more information about how Features work</a> and their <a href="https://containers.dev/implementors/features-distribution" class="external-link" target="_blank">distribution</a>.</p>
+<h2 id="_pre-building-dev-container-images" data-needslink="_pre-building-dev-container-images">Pre-building dev container images</h2>
+<p>We recommend pre-building images with the tools you need rather than creating and building a container image each time you open your project in a dev container. Using pre-built images will result in a faster container startup, simpler configuration, and allows you to pin to a specific version of tools to improve supply-chain security and avoid potential breaks. You can automate pre-building your image by scheduling the build using a DevOps or continuous integration (CI) service like GitHub Actions.</p>
+<p>Even better - pre-built images can contain Dev Container metadata so when you reference an image, settings will be pulled across automatically.</p>
+<p>We recommend using the <a href="/docs/devcontainers/devcontainer-cli">Dev Container CLI</a> (or other <a href="https://containers.dev" class="external-link" target="_blank">specification</a> supporting utilities like the <a href="https://github.com/marketplace/actions/dev-container-build-and-run-action" class="external-link" target="_blank">GitHub Action</a>) to pre-build your images since it is kept in sync with the Dev Containers extension's latest capabilities - including <a href="#_dev-container-features">dev container Features</a>. Once you've built your image, you can push it to a container registry (like the <a href="https://learn.microsoft.com/azure/container-registry/container-registry-get-started-docker-cli?tabs=azure-cli" class="external-link" target="_blank">Azure Container Registry</a>, <a href="https://docs.github.com/packages/working-with-a-github-packages-registry/working-with-the-container-registry#pushing-container-images" class="external-link" target="_blank">GitHub Container Registry</a>, or <a href="https://docs.docker.com/engine/reference/commandline/push" class="external-link" target="_blank">Docker Hub</a>) and reference it directly.</p>
+<p>You can use the GitHub Action in the <a href="https://github.com/devcontainers/ci" class="external-link" target="_blank">devcontainers/ci</a> repository to help you reuse dev containers in your workflows.</p>
+<p>Go to the <a href="/docs/devcontainers/devcontainer-cli#_pre-building">dev container CLI article on pre-building images</a> for more information.</p>
+<h3 id="_inheriting-metadata" data-needslink="_inheriting-metadata">Inheriting metadata</h3>
+<p>You can include Dev Container configuration and Feature metadata in prebuilt images via <a href="https://docs.docker.com/config/labels-custom-metadata/" class="external-link" target="_blank">image labels</a>. This makes the image self-contained since these settings are automatically picked up when the image is referenced - whether directly, in a <code>FROM</code> in a referenced Dockerfile, or in a Docker Compose file. This helps prevent your Dev Container config and image contents from getting out of sync, and allows you to push updates of the same configuration to multiple repositories through a simple image reference.</p>
+<p>This metadata label is <strong>automatically added</strong> when you pre-build using the <a href="/docs/devcontainers/devcontainer-cli">Dev Container CLI</a> (or other <a href="https://containers.dev" class="external-link" target="_blank">specification</a> supporting utilities like the <a href="https://github.com/marketplace/actions/devcontainers-ci" class="external-link" target="_blank">GitHub Action</a> or <a href="https://marketplace.visualstudio.com/items?itemName=devcontainers.ci" class="external-link" target="_blank">Azure DevOps task</a>) and includes settings from <code>devcontainer.json</code> and any referenced Dev Container Features.</p>
+<p>This allows you to have a separate <strong>more complex</strong> <code>devcontainer.json</code> you use to pre-build your image, and then a dramatically <strong>simplified one</strong> in one or more repositories. The contents of the image will be merged with this simplified <code>devcontainer.json</code> content at the time you create the container (go to <a href="https://containers.dev/implementors/spec/#merge-logic" class="external-link" target="_blank">the spec</a> for information on merge logic). But at its simplest, you can just reference the image directly in <code>devcontainer.json</code> for the settings to take effect:</p>
+<pre class="shiki" data-lang="json" shiki-themes dark-plus light-plus" style="--shiki-dark:#D4D4D4;--shiki-light:#000000;--shiki-dark-bg:#1E1E1E;--shiki-light-bg:#FFFFFF" tabindex="0"><code><span class="line"><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">{</span></span>
+<span class="line"><span style="--shiki-dark:#9CDCFE;--shiki-light:#0451A5">  "image"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">: </span><span style="--shiki-dark:#CE9178;--shiki-light:#A31515">"mcr.microsoft.com/devcontainers/go:1"</span></span>
+<span class="line"><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">}</span></span>
+<span class="line"></span></code></pre>
+<p>Note that you can also opt to manually add metadata to an image label instead. These properties will be picked up even if you didn't use the Dev Container CLI to build (and can be updated by the CLI even if you do). For example, consider this Dockerfile snippet:</p>
+<pre class="shiki" data-lang="docker" shiki-themes dark-plus light-plus" style="--shiki-dark:#D4D4D4;--shiki-light:#000000;--shiki-dark-bg:#1E1E1E;--shiki-light-bg:#FFFFFF" tabindex="0"><code><span class="line"><span style="--shiki-dark:#569CD6;--shiki-light:#0000FF">LABEL</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000"> devcontainer.metadata=</span><span style="--shiki-dark:#CE9178;--shiki-light:#A31515">'[{ \</span></span>
+<span class="line"><span style="--shiki-dark:#CE9178;--shiki-light:#A31515">  "capAdd": [ "SYS_PTRACE" ], \</span></span>
+<span class="line"><span style="--shiki-dark:#CE9178;--shiki-light:#A31515">  "remoteUser": "devcontainer", \</span></span>
+<span class="line"><span style="--shiki-dark:#CE9178;--shiki-light:#A31515">  "postCreateCommand": "yarn install" \</span></span>
+<span class="line"><span style="--shiki-dark:#CE9178;--shiki-light:#A31515">}]'</span></span>
+<span class="line"></span></code></pre>
+<h2 id="_inspecting-volumes" data-needslink="_inspecting-volumes">Inspecting volumes</h2>
+<p>Occasionally you may run into a situation where you are using a Docker named volume that you want to inspect or make changes in. You can use VS Code to work with these contents without creating or modifying <code>devcontainer.json</code> file by selecting the <strong>Dev Containers: Explore a Volume in a Dev Container...</strong> from the Command Palette (<span class="keybinding">F1</span>).</p>
+<p>You can also inspect your volumes in the Remote Explorer. Make sure you have Containers selected in the dropdown, then you'll notice a <strong>Dev Volumes</strong> section. You can right-click on a volume to inspect its creation information, like when the volume was created, what repository was cloned into it, and the mountpoint. You can also explore it in a dev container.</p>
+<p><img src="/assets/docs/devcontainers/containers/dev-volumes.png" alt="Right-click dev volumes in Remote Explorer" loading="lazy"></p>
+<p>If you have the <a href="https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-containers" class="external-link" target="_blank">Container Tools extension</a> installed, you can right-click on a volume in the <strong>Volumes</strong> section of the <strong>Container Explorer</strong> and select <strong>Explore in a Development Container</strong>.</p>
+<p><img src="/assets/docs/devcontainers/containers/docker-explore-dev-container.png" alt="Explore in dev container in Container Tools context menu" loading="lazy"></p>
+<h2 id="_managing-extensions" data-needslink="_managing-extensions">Managing extensions</h2>
+<p>VS Code runs extensions in one of two places: locally on the UI / client side, or in the container. While extensions that affect the VS Code UI, like themes and snippets, are installed locally, most extensions will reside inside a particular container. This allows you to install only the extensions you need for a given task in a container and seamlessly switch your entire tool-chain just by connecting to a new container.</p>
+<p>If you install an extension from the Extensions view, it will automatically be installed in the correct location. You can tell where an extension is installed based on the category grouping. There will be a <strong>Local - Installed</strong> category and also one for your container.</p>
+<p><img src="/assets/docs/devcontainers/containers/containers-installed-remote-indicator.png" alt="Workspace Extension Category" loading="lazy"></p>
+<p><img src="/assets/docs/devcontainers/containers/local-installed-extensions.png" alt="Local Extension Category" loading="lazy"></p>
+<blockquote><p><strong>Note:</strong> If you are an extension author and your extension is not working properly or installs in the wrong place, see <a href="/api/advanced-topics/remote-extensions">Supporting Remote Development</a> for details.</p>
+</blockquote><p>Local extensions that actually need to run remotely will appear <strong>Disabled</strong> in the <strong>Local - Installed</strong> category. Select <strong>Install</strong> to install an extension on your remote host.</p>
+<p><img src="/assets/docs/devcontainers/containers/containers-disabled-extensions.png" alt="Disabled Extensions w/Install Button" loading="lazy"></p>
+<p>You can also install all locally installed extensions inside the Dev Container by going to the Extensions view and selecting <strong>Install Local Extensions in Dev Container: {Name}</strong> using the cloud button at the right of the <strong>Local - Installed</strong> title bar. This will display a dropdown where you can select which locally installed extensions to install in your container.</p>
+<p><img src="/assets/docs/devcontainers/containers/install-all-extn-containers.png" alt="Install all extensions" loading="lazy"></p>
+<p>However, some extensions may require you to <a href="/docs/devcontainers/create-dev-container#_install-additional-software">install additional software</a> in the container. Consult extension documentation for details if you encounter issues.</p>
+<h3 id="_adding-an-extension-to-devcontainerjson" data-needslink="_adding-an-extension-to-devcontainerjson">Adding an extension to devcontainer.json</h3>
+<p>While you can edit your <a href="/docs/devcontainers/create-dev-container#_create-a-devcontainerjson-file">devcontainer.json</a> file by hand to add a list of extension IDs, you can also right-click on any extension in the Extensions view and select <strong>Add to devcontainer.json</strong>.</p>
+<p><img src="/assets/docs/devcontainers/containers/containers-addto-devcontainer.png" alt="Add to devcontainer.json menu" loading="lazy"></p>
+<h3 id="_opt-out-of-extensions" data-needslink="_opt-out-of-extensions">Opt out of extensions</h3>
+<p>If a base image or Feature configures an extension that you do not want installed in your dev container, you can opt out by listing the extension with a minus sign. For example:</p>
+<pre class="shiki" data-lang="json" shiki-themes dark-plus light-plus" style="--shiki-dark:#D4D4D4;--shiki-light:#000000;--shiki-dark-bg:#1E1E1E;--shiki-light-bg:#FFFFFF" tabindex="0"><code><span class="line"><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">{</span></span>
+<span class="line"><span style="--shiki-dark:#9CDCFE;--shiki-light:#0451A5">  "image"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">: </span><span style="--shiki-dark:#CE9178;--shiki-light:#A31515">"mcr.microsoft.com/devcontainers/typescript-node:1-20-bookworm"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">,</span></span>
+<span class="line"><span style="--shiki-dark:#9CDCFE;--shiki-light:#0451A5">  "customizations"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">: {</span></span>
+<span class="line"><span style="--shiki-dark:#9CDCFE;--shiki-light:#0451A5">    "vscode"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">: {</span></span>
+<span class="line"><span style="--shiki-dark:#9CDCFE;--shiki-light:#0451A5">      "extensions"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">: [</span><span style="--shiki-dark:#CE9178;--shiki-light:#A31515">"-dbaeumer.vscode-eslint"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">]</span></span>
+<span class="line"><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">    }</span></span>
+<span class="line"><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">  }</span></span>
+<span class="line"><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">}</span></span>
+<span class="line"></span></code></pre>
+<h3 id="_always-installed-extensions" data-needslink="_always-installed-extensions">&quot;Always installed&quot; extensions</h3>
+<p>If there are extensions that you would like always installed in any container, you can update the <span class="setting"><span class="setting-dropdown" data-setting-id="dev.containers.defaultExtensions">
+    <span class="setting-link-main">
+      <span class="codicon codicon-settings-gear dynamic-setting-icon"></span>
+      dev.containers.defaultExtensions
+      
+    </span>
+    <button 
+      type="button"
+      class="setting-dropdown-trigger"
+      aria-haspopup="menu"
+      aria-expanded="false"
+      aria-label="Open setting in VS Code">
+        <svg class="setting-dropdown-chevron" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+        <path d="M7.976 10.072l4.357-4.357.62.618L8.284 11h-.618L3 6.333l.619-.618 4.357 4.357z"/>
+        </svg>
+    </button>
+    <span class="setting-dropdown-menu" role="menu" aria-label="Open setting">
+      <span role="menuitem" class="setting-action-item" data-version="stable" tabindex="0">Open in VS Code</span>
+      <span role="menuitem" class="setting-action-item" data-version="insiders" tabindex="-1">Open in VS Code Insiders</span>
+    </span>
+  </span></span> User <a href="/docs/configure/settings">setting</a>. For example, if you wanted to install the <a href="https://marketplace.visualstudio.com/items?itemName=eamodio.gitlens" class="external-link" target="_blank">GitLens</a> and <a href="https://marketplace.visualstudio.com/items?itemName=mutantdino.resourcemonitor" class="external-link" target="_blank">Resource Monitor</a> extensions, you would specify their extension IDs as follows:</p>
+<pre class="shiki" data-lang="json" shiki-themes dark-plus light-plus" style="--shiki-dark:#D4D4D4;--shiki-light:#000000;--shiki-dark-bg:#1E1E1E;--shiki-light-bg:#FFFFFF" tabindex="0"><code><span class="line"><span style="--shiki-dark:#CE9178;--shiki-light:#A31515">"dev.containers.defaultExtensions"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">: [</span></span>
+<span class="line"><span style="--shiki-dark:#CE9178;--shiki-light:#A31515">    "eamodio.gitlens"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">,</span></span>
+<span class="line"><span style="--shiki-dark:#CE9178;--shiki-light:#A31515">    "mutantdino.resourcemonitor"</span></span>
+<span class="line"><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">]</span></span>
+<span class="line"></span></code></pre>
+<h3 id="_advanced-forcing-an-extension-to-run-locally-or-remotely" data-needslink="_advanced-forcing-an-extension-to-run-locally-or-remotely">Advanced: Forcing an extension to run locally or remotely</h3>
+<p>Extensions are typically designed and tested to either run locally or remotely, not both. However, if an extension supports it, you can force it to run in a particular location in your <code>settings.json</code> file.</p>
+<p>For example, the setting below will force the <a href="https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-containers" class="external-link" target="_blank">Container Tools</a> extension to run locally and <a href="https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-ssh-edit" class="external-link" target="_blank">Remote - SSH: Editing Configuration Files</a> extension to run remotely instead of their defaults:</p>
+<pre class="shiki" data-lang="json" shiki-themes dark-plus light-plus" style="--shiki-dark:#D4D4D4;--shiki-light:#000000;--shiki-dark-bg:#1E1E1E;--shiki-light-bg:#FFFFFF" tabindex="0"><code><span class="line"><span style="--shiki-dark:#CE9178;--shiki-light:#A31515">"remote.extensionKind"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">: {</span></span>
+<span class="line"><span style="--shiki-dark:#9CDCFE;--shiki-light:#0451A5">    "ms-azuretools.vscode-containers"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">: [ </span><span style="--shiki-dark:#CE9178;--shiki-light:#A31515">"ui"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000"> ],</span></span>
+<span class="line"><span style="--shiki-dark:#9CDCFE;--shiki-light:#0451A5">    "ms-vscode-remote.remote-ssh-edit"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">: [ </span><span style="--shiki-dark:#CE9178;--shiki-light:#A31515">"workspace"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000"> ]</span></span>
+<span class="line"><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">}</span></span>
+<span class="line"></span></code></pre>
+<p>A value of <code>&quot;ui&quot;</code> instead of <code>&quot;workspace&quot;</code> will force the extension to run on the local UI/client side instead. Typically, this should only be used for testing unless otherwise noted in the extension's documentation since it <strong>can break extensions</strong>. See the section on <a href="/api/advanced-topics/extension-host#preferred-extension-location">preferred extension location</a> for details.</p>
+<h2 id="_forwarding-or-publishing-a-port" data-needslink="_forwarding-or-publishing-a-port">Forwarding or publishing a port</h2>
+<p>Containers are separate environments, so if you want to access a server, service, or other resource inside your container, you will need to either &quot;forward&quot; or &quot;<a href="https://stackoverflow.com/a/22150099" class="external-link" target="_blank">publish</a>&quot; the port to your host. You can either configure your container to always expose these ports or just forward them temporarily.</p>
+<h3 id="_always-forwarding-a-port" data-needslink="_always-forwarding-a-port">Always forwarding a port</h3>
+<p>You can specify a list of ports you <strong>always</strong> want to forward when attaching or opening a folder in container by using the <code>forwardPorts</code> property in <code>devcontainer.json</code>.</p>
+<pre class="shiki" data-lang="json" shiki-themes dark-plus light-plus" style="--shiki-dark:#D4D4D4;--shiki-light:#000000;--shiki-dark-bg:#1E1E1E;--shiki-light-bg:#FFFFFF" tabindex="0"><code><span class="line"><span style="--shiki-dark:#CE9178;--shiki-light:#A31515">"forwardPorts"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">: [</span><span style="--shiki-dark:#B5CEA8;--shiki-light:#098658">3000</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">, </span><span style="--shiki-dark:#B5CEA8;--shiki-light:#098658">3001</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">]</span></span>
+<span class="line"></span></code></pre>
+<p>Simply reload / reopen the window and the setting will be applied when VS Code connects to the container.</p>
+<h3 id="_temporarily-forwarding-a-port" data-needslink="_temporarily-forwarding-a-port">Temporarily forwarding a port</h3>
+<p>If you need to access a port that you didn't add to <code>devcontainer.json</code> or publish in your Docker Compose file, you can <strong>temporarily forward</strong> a new port for the duration of the session by running the <strong>Forward a Port</strong> command from the Command Palette (<span class="keybinding">F1</span>).</p>
+<p><img src="/assets/docs/devcontainers/containers/forward-port-containers.png" alt="Forward port input" loading="lazy"></p>
+<p>After selecting a port, a notification will tell you the localhost port you should use to access the port in the container. For example, if you forwarded an HTTP server listening on port 3000, the notification may tell you that it was mapped to port 4123 on localhost. You can then connect to this remote HTTP server using <code>http://localhost:4123</code>.</p>
+<p>This same information is available in the <strong>Forwarded Ports</strong> section of the Remote Explorer if you need to access it later.</p>
+<p>If you would like VS Code to remember any ports you have forwarded, check <strong>Remote: Restore Forwarded Ports</strong> in the Settings editor (<span class="dynamic-keybinding" data-commandId="workbench.action.openSettings" data-osx="⌘," data-win="Ctrl+," data-linux="Ctrl+,"><span class="keybinding">⌘,</span> (Windows, Linux <span class="keybinding">Ctrl+,</span>)</span>) or set <code>&quot;remote.restoreForwardedPorts&quot;: true</code> in <code>settings.json</code>.</p>
+<p><img src="/assets/docs/devcontainers/containers/restore-forwarded-ports.png" alt="Restore forwarded ports setting" loading="lazy"></p>
+<h3 id="_publishing-a-port" data-needslink="_publishing-a-port">Publishing a port</h3>
+<p>Docker has the concept of &quot;publishing&quot; ports when the container is created. Published ports behave very much like ports you make available to your local network. If your application only accepts calls from <code>localhost</code>, it will reject connections from published ports just as your local machine would for network calls. Forwarded ports, on the other hand, actually look like <code>localhost</code> to the application. Each can be useful in different situations.</p>
+<p>To publish a port, you can:</p>
+<ol>
+<li>
+<p><strong>Use the appPort property:</strong> If you reference an image or Dockerfile in <code>devcontainer.json</code>, you can use the <code>appPort</code> property to publish ports to the host.</p>
+<pre class="shiki" data-lang="json" shiki-themes dark-plus light-plus" style="--shiki-dark:#D4D4D4;--shiki-light:#000000;--shiki-dark-bg:#1E1E1E;--shiki-light-bg:#FFFFFF" tabindex="0"><code><span class="line"><span style="--shiki-dark:#CE9178;--shiki-light:#A31515">"appPort"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">: [ </span><span style="--shiki-dark:#B5CEA8;--shiki-light:#098658">3000</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">, </span><span style="--shiki-dark:#CE9178;--shiki-light:#A31515">"8921:5000"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000"> ]</span></span>
+<span class="line"></span></code></pre>
+</li>
+<li>
+<p><strong>Use the Docker Compose ports mapping:</strong> The <a href="https://docs.docker.com/compose/compose-file#ports" class="external-link" target="_blank">ports mapping</a> can easily be added your <code>docker-compose.yml</code> file to publish additional ports.</p>
+<pre class="shiki" data-lang="yaml" shiki-themes dark-plus light-plus" style="--shiki-dark:#D4D4D4;--shiki-light:#000000;--shiki-dark-bg:#1E1E1E;--shiki-light-bg:#FFFFFF" tabindex="0"><code><span class="line"><span style="--shiki-dark:#569CD6;--shiki-light:#800000">ports</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">:</span></span>
+<span class="line"><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">- </span><span style="--shiki-dark:#CE9178;--shiki-light:#A31515">"3000"</span></span>
+<span class="line"><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">- </span><span style="--shiki-dark:#CE9178;--shiki-light:#A31515">"8921:5000"</span></span>
+<span class="line"></span></code></pre>
+</li>
+</ol>
+<p>In each case, you'll need to rebuild your container for the setting to take effect. You can do this by running the <strong>Dev Containers: Rebuild Container</strong> command in the Command Palette (<span class="keybinding">F1</span>) when you are connected to the container.</p>
+<h2 id="_opening-a-terminal" data-needslink="_opening-a-terminal">Opening a terminal</h2>
+<p>Opening a terminal in a container from VS Code is simple. Once you've opened a folder in a container, <strong>any terminal window</strong> you open in VS Code (<strong>Terminal &gt; New Terminal</strong>) will automatically run in the container rather than locally.</p>
+<p>You can also use the <code>code</code> command line from this same terminal window to perform a number of operations such as opening a new file or folder in the container. Type <code>code --help</code> to learn what options are available from the command line.</p>
+<p><img src="/assets/docs/devcontainers/containers/code-command-in-terminal.png" alt="Using the code CLI" loading="lazy"></p>
+<h2 id="_debugging-in-a-container" data-needslink="_debugging-in-a-container">Debugging in a container</h2>
+<p>Once you've opened a folder in a container, you can use VS Code's debugger in the same way you would when running the application locally. For example, if you select a launch configuration in <code>launch.json</code> and start debugging (<span class="dynamic-keybinding" data-commandId="workbench.action.debug.start" data-osx="F5" data-win="F5" data-linux="F5"><span class="keybinding">F5</span></span>), the application will start on the remote host and attach the debugger to it.</p>
+<p>See the <a href="/docs/debugtest/debugging">debugging</a> documentation for details on configuring VS Code's debugging features in <code>.vscode/launch.json</code>.</p>
+<h2 id="_container-specific-settings" data-needslink="_container-specific-settings">Container specific settings</h2>
+<p>VS Code's local user settings are also reused when you are connected to a dev container. While this keeps your user experience consistent, you may want to vary some of these settings between your local machine and each container. Fortunately, once you have connected to a container, you can also set container-specific settings by running the <strong>Preferences: Open Remote Settings</strong> command from the Command Palette (<span class="keybinding">F1</span>) or by selecting the <strong>Remote</strong> tab in the Settings editor. These will override any local settings you have in place whenever you connect to the container.</p>
+<p><img src="/assets/docs/devcontainers/containers/container-settings.png" alt="Container specific settings tab" loading="lazy"></p>
+<h3 id="_default-container-specific-settings" data-needslink="_default-container-specific-settings">Default container specific settings</h3>
+<p>You can include defaults for container specific settings in <code>devcontainer.json</code> using the <code>settings</code> property. These values will be automatically placed in the container specific settings file inside the container once it is created.</p>
+<p>For example, adding this to <code>.devcontainer/devcontainer.json</code> will set the Java home path:</p>
+<pre class="shiki" data-lang="json" shiki-themes dark-plus light-plus" style="--shiki-dark:#D4D4D4;--shiki-light:#000000;--shiki-dark-bg:#1E1E1E;--shiki-light-bg:#FFFFFF" tabindex="0"><code><span class="line"><span style="--shiki-dark:#6A9955;--shiki-light:#008000">// Configure tool-specific properties.</span></span>
+<span class="line"><span style="--shiki-dark:#CE9178;--shiki-light:#A31515">"customizations"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">: {</span></span>
+<span class="line"><span style="--shiki-dark:#6A9955;--shiki-light:#008000">    // Configure properties specific to VS Code.</span></span>
+<span class="line"><span style="--shiki-dark:#9CDCFE;--shiki-light:#0451A5">    "vscode"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">: {</span></span>
+<span class="line"><span style="--shiki-dark:#9CDCFE;--shiki-light:#0451A5">        "settings"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">: {</span></span>
+<span class="line"><span style="--shiki-dark:#9CDCFE;--shiki-light:#0451A5">            "java.home"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">: </span><span style="--shiki-dark:#CE9178;--shiki-light:#A31515">"/docker-java-home"</span></span>
+<span class="line"><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">        }</span></span>
+<span class="line"><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">    }</span></span>
+<span class="line"><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">}</span></span>
+<span class="line"></span></code></pre>
+<p>Since this just establishes the default, you are still able to change the settings as needed once the container is created.</p>
+<h2 id="_managing-containers" data-needslink="_managing-containers">Managing containers</h2>
+<p>By default, the Dev Containers extension automatically starts the containers mentioned in the <code>devcontainer.json</code> when you open the folder. When you close VS Code, the extension automatically shuts down the containers you've connected to. You can change this behavior by adding <code>&quot;shutdownAction&quot;: &quot;none&quot;</code> to <code>devcontainer.json</code>.</p>
+<p>While you can use the command line to manage your containers, you can also use the  <strong>Remote Explorer</strong>. To stop a container, select Containers from the dropdown (if present), right-click on a running container, and select <strong>Stop Container</strong>. You can also start exited containers, remove containers, and remove recent folders. From the Details view, you can forward ports and open already forwarded ports in the browser.</p>
+<p><img src="/assets/docs/devcontainers/containers/containers-explorer.png" alt="Containers Explorer screenshot" loading="lazy"></p>
+<p>If you want to clean out images or mass-delete containers, see <a href="/docs/devcontainers/tips-and-tricks#_cleaning-out-unused-containers-and-images">Cleaning out unused containers and images</a> for different options.</p>
+<h2 id="_personalizing-with-dotfile-repositories" data-needslink="_personalizing-with-dotfile-repositories">Personalizing with dotfile repositories</h2>
+<p>Dotfiles are files whose filename begins with a dot (<code>.</code>) and typically contain configuration information for various applications. Since development containers can cover a wide range of application types, it can be useful to store these files somewhere so that you can easily copy them into a container once it is up and running.</p>
+<p>A common way to do this is to store these dotfiles in a GitHub repository and then use a utility to clone and apply them. The Dev Containers extension has built-in support for using these with your own containers. If you are new to the idea, take a look at the different <a href="https://dotfiles.github.io/" class="external-link" target="_blank">dotfiles bootstrap repositories</a> that exist.</p>
+<p>To use it, add your dotfiles GitHub repository to VS Code's User Settings (<span class="dynamic-keybinding" data-commandId="workbench.action.openSettings" data-osx="⌘," data-win="Ctrl+," data-linux="Ctrl+,"><span class="keybinding">⌘,</span> (Windows, Linux <span class="keybinding">Ctrl+,</span>)</span>) as follows:</p>
+<p><img src="/assets/docs/devcontainers/containers/dotfiles.png" alt="Settings for dotfiles" loading="lazy"></p>
+<p>Or in <code>settings.json</code>:</p>
+<pre class="shiki" data-lang="json" shiki-themes dark-plus light-plus" style="--shiki-dark:#D4D4D4;--shiki-light:#000000;--shiki-dark-bg:#1E1E1E;--shiki-light-bg:#FFFFFF" tabindex="0"><code><span class="line"><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">{</span></span>
+<span class="line"><span style="--shiki-dark:#9CDCFE;--shiki-light:#0451A5">  "dotfiles.repository"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">: </span><span style="--shiki-dark:#CE9178;--shiki-light:#A31515">"your-github-id/your-dotfiles-repo"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">,</span></span>
+<span class="line"><span style="--shiki-dark:#9CDCFE;--shiki-light:#0451A5">  "dotfiles.targetPath"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">: </span><span style="--shiki-dark:#CE9178;--shiki-light:#A31515">"~/dotfiles"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">,</span></span>
+<span class="line"><span style="--shiki-dark:#9CDCFE;--shiki-light:#0451A5">  "dotfiles.installCommand"</span><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">: </span><span style="--shiki-dark:#CE9178;--shiki-light:#A31515">"install.sh"</span></span>
+<span class="line"><span style="--shiki-dark:#D4D4D4;--shiki-light:#000000">}</span></span>
+<span class="line"></span></code></pre>
+<p>From this point forward, the dotfiles repository will be used whenever a container is created.</p>
+<h2 id="_known-limitations" data-needslink="_known-limitations">Known limitations</h2>
+<h3 id="_dev-containers-limitations" data-needslink="_dev-containers-limitations">Dev Containers limitations</h3>
+<ul>
+<li>Windows container images are <strong>not</strong> supported.</li>
+<li>All roots/folders in a multi-root workspace will be opened in the same container, regardless of whether there are configuration files at lower levels.</li>
+<li>The unofficial Ubuntu Docker <strong>snap</strong> package for Linux is <strong>not</strong> supported. Follow the <a href="https://docs.docker.com/install/#supported-platforms" class="external-link" target="_blank">official Docker install instructions for your distribution</a>.</li>
+<li>Docker Toolbox on Windows is not supported.</li>
+<li>If you clone a Git repository using SSH and your SSH key has a passphrase, VS Code's pull and sync features may hang when running remotely. Either use an SSH key without a passphrase, clone using HTTPS, or run <code>git push</code> from the command line to work around the issue.</li>
+<li>Local proxy settings are not reused inside the container, which can prevent extensions from working unless the appropriate proxy information is configured (for example global <code>HTTP_PROXY</code> or <code>HTTPS_PROXY</code> environment variables with the appropriate proxy information).</li>
+<li>There is an incompatibility between OpenSSH versions on Windows when the ssh-agent runs with version &lt;= 8.8 and the SSH client (on any platform) runs version &gt;= 8.9. The workaround is to upgrade OpenSSH on Windows to 8.9 or later, either using winget or an installer from <a href="https://github.com/PowerShell/Win32-OpenSSH/releases" class="external-link" target="_blank">Win32-OpenSSH/releases</a>. (Note that <code>ssh-add -l</code> will work correctly, but <code>ssh &lt;ssh-server&gt;</code> will fail with <code>&lt;ssh-server&gt;: Permission denied (publickey)</code>. This also affects Git when using SSH to connect to the repository.)</li>
+</ul>
+<p>See <a href="https://aka.ms/vscode-remote/containers/issues" class="external-link" target="_blank">here for a list of active issues</a> related to Containers.</p>
+<h3 id="_docker-limitations" data-needslink="_docker-limitations">Docker limitations</h3>
+<p>See the Docker troubleshooting guide for <a href="https://docs.docker.com/docker-for-windows/troubleshoot" class="external-link" target="_blank">Windows</a> or <a href="https://docs.docker.com/docker-for-mac/troubleshoot" class="external-link" target="_blank">Mac</a> for more information.</p>
+<h3 id="_container-tools-extension-limitations" data-needslink="_container-tools-extension-limitations">Container Tools Extension limitations</h3>
+<p>If you are using the Container Tools or Kubernetes extension from a WSL, Remote - Tunnels or Remote - SSH window, using the <strong>Attach Visual Studio Code</strong> context menu action in the Container Explorer or Kubernetes view will ask to pick from the available containers a second time.</p>
+<h3 id="_extension-limitations" data-needslink="_extension-limitations">Extension limitations</h3>
+<p>At this point, most extensions will work inside Dev Containers without modification. However, in some cases, certain features may require changes. If you run into an extension issue, see <a href="/docs/remote/troubleshooting#_extension-tips">here for a summary of common problems and solutions</a> that you can mention to the extension author when reporting the issue.</p>
+<p>In addition, while Alpine support is available, some extensions installed in the container may not work due to <code>glibc</code> dependencies in native code inside the extension. See the <a href="/docs/remote/linux">Remote Development with Linux</a> article for details.</p>
+<h2 id="_advanced-container-configuration" data-needslink="_advanced-container-configuration">Advanced container configuration</h2>
+<p>See the <a href="/remote/advancedcontainers/overview">Advanced container configuration</a> articles for information on the following topics:</p>
+<ul>
+<li><a href="/remote/advancedcontainers/environment-variables">Adding environment variables</a></li>
+<li><a href="/remote/advancedcontainers/add-local-file-mount">Adding another local file mount</a></li>
+<li><a href="/remote/advancedcontainers/change-default-source-mount">Changing or removing the default source code mount</a></li>
+<li><a href="/remote/advancedcontainers/improve-performance">Improving container disk performance</a></li>
+<li><a href="/remote/advancedcontainers/add-nonroot-user">Adding a non-root user to your dev container</a></li>
+<li><a href="/remote/advancedcontainers/set-docker-compose-project-name">Setting the project name for Docker Compose</a></li>
+<li><a href="/remote/advancedcontainers/use-docker-kubernetes">Using Docker or Kubernetes from inside a container</a></li>
+<li><a href="/remote/advancedcontainers/connect-multiple-containers">Connecting to multiple containers at once</a></li>
+<li><a href="/remote/advancedcontainers/develop-remote-host">Developing inside a container on a remote Docker Machine or SSH host</a></li>
+<li><a href="/remote/advancedcontainers/reduce-docker-warnings">Reducing Dockerfile build warnings</a></li>
+<li><a href="/remote/advancedcontainers/sharing-git-credentials">Sharing git credentials with your container</a></li>
+</ul>
+<h2 id="_devcontainerjson-reference" data-needslink="_devcontainerjson-reference">devcontainer.json reference</h2>
+<p>There is a full <a href="https://containers.dev/implementors/json_reference" class="external-link" target="_blank">devcontainer.json reference</a>, where you can review the file schema to help you customize your development containers and control how you attach to running containers.</p>
+<h2 id="_questions-or-feedback" data-needslink="_questions-or-feedback">Questions or feedback</h2>
+<ul>
+<li>See <a href="/docs/devcontainers/tips-and-tricks">Tips and Tricks</a> or the <a href="/docs/devcontainers/faq">FAQ</a>.</li>
+<li>Search on <a href="https://stackoverflow.com/questions/tagged/vscode-remote" class="external-link" target="_blank">Stack Overflow</a>.</li>
+<li>Add a <a href="https://aka.ms/vscode-remote/feature-requests" class="external-link" target="_blank">feature request</a> or <a href="https://aka.ms/vscode-remote/issues/new" class="external-link" target="_blank">report a problem</a>.</li>
+<li>Create a <a href="https://containers.dev/templates" class="external-link" target="_blank">Dev Container Template</a> or <a href="https://containers.dev/features" class="external-link" target="_blank">Feature</a> for others to use.</li>
+<li>Review and provide feedback on the <a href="https://containers.dev/" class="external-link" target="_blank">Development Containers Specification</a>.</li>
+<li>Contribute to <a href="https://github.com/microsoft/vscode-docs" class="external-link" target="_blank">our documentation</a> or <a href="https://github.com/microsoft/vscode" class="external-link" target="_blank">VS Code itself</a>.</li>
+<li>See our <a href="https://aka.ms/vscode-remote/contributing" class="external-link" target="_blank">CONTRIBUTING</a> guide for details.</li>
+</ul>
+<h2 id="_troubleshooting" data-needslink="_troubleshooting">Troubleshooting</h2>
+<h3 id="_unable-to-write-file-nopermissions-filesystemerror" data-needslink="_unable-to-write-file-nopermissions-filesystemerror">Unable to write file (NoPermissions (FileSystemError))</h3>
+<p>You might encounter this issue when you run dev containers in the following configuration:</p>
+<ul>
+<li>Docker Desktop running with Windows Subsystem for Linux (WSL) backend</li>
+<li><a href="https://docs.docker.com/security/for-admins/hardened-desktop/enhanced-container-isolation/" class="external-link" target="_blank">Enhanced Container Isolation</a> (ECI) enabled</li>
+</ul>
+<p>Check <a href="https://github.com/microsoft/vscode-docs/issues/8278" class="external-link" target="_blank">issue #8278</a> for a potential workaround.</p>
+<h2 id="_next-steps" data-needslink="_next-steps">Next steps</h2>
+<ul>
+<li><a href="/docs/devcontainers/attach-container">Attach to a Running Container</a> - Attach to an already running Docker container.</li>
+<li><a href="/docs/devcontainers/create-dev-container">Create a Development Container</a> - Create a custom container for your work environment.</li>
+<li><a href="/remote/advancedcontainers/overview">Advanced Containers</a> - Find solutions to advanced container scenarios.</li>
+<li><a href="https://containers.dev/implementors/json_reference" class="external-link" target="_blank">devcontainer.json reference</a> - Review the <code>devcontainer.json</code> schema.</li>
+</ul>
+
+                <div class="feedback" data-edit-url="https://vscode.dev/github/microsoft/vscode-docs/blob/main/docs/devcontainers/containers.md"></div>
+                
+                <div class="body-footer">9/9/2026</div>
+                
+            </main>
+        </div>
+        
+        <!-- Mobile connect widget -->
+        <div class="docs-mobile-widgets visible-xs">
+            <div class="connect-widget"></div>
+        </div>
+    </div>
+</div>
+		</main>
+	</div>
+
+	<div id="search-popup-overlay" class="search-popup-overlay" role="dialog" aria-modal="true" aria-label="Search">
+		<div class="search-popup-container">
+			<div class="search-popup-header">
+				<form class="search-popup-form">
+					<div class="input-group">
+						<input type="text" name="q" class="search-box form-control" placeholder="Search the website"
+							aria-label="Search text" role="combobox" aria-expanded="false"
+							aria-autocomplete="list" aria-controls="search-results-listbox"
+							aria-activedescendant="" />
+						<span class="input-group-btn">
+							<button tabindex="0" class="btn" type="submit" aria-label="Search">
+								<img class="search-icon-dark" src="/assets/icons/search-dark.svg" alt="Search" />
+								<img class="search-icon-light" src="/assets/icons/search.svg" alt="Search" />
+							</button>
+						</span>
+					</div>
+				</form>
+				<button class="search-popup-close" type="button" aria-label="Close search"><i class="codicon codicon-close" aria-hidden="true"></i></button>
+			</div>
+			<div class="search-popup-results">
+				<ul class="search-popup-results-list" id="search-results-listbox" role="listbox" aria-label="Search results"></ul>
+			</div>
+			<div class="sr-only" role="status" aria-live="polite" aria-atomic="true" id="search-popup-status"></div>
+		</div>
+	</div>
+
+
+	<footer role="contentinfo" class="container">
+		<div class="footer-container">
+			<div class="footer-row">
+				<div class="footer-social">
+					<ul class="links">
+						<li>
+							<a href="https://github.com/microsoft/vscode"><img src="/assets/icons/github-icon.svg" alt="VS Code on Github"></a>
+						</li>
+						<li>
+							<a href="https://go.microsoft.com/fwlink/?LinkID=533687"><img src="/assets/icons/x-icon.svg" class="x-icon" alt="Follow us on X"></a>
+						</li>
+						<li>
+							<a href="https://www.linkedin.com/showcase/vs-code"><img src="/assets/icons/linkedin-icon.svg" alt="VS Code on LinkedIn"></a>
+						</li>
+						<li>
+							<a href="https://bsky.app/profile/vscode.dev"><img src="/assets/icons/bluesky-icon.svg" alt="VS Code on Bluesky"></a>
+						</li>
+						<li>
+							<a href="https://www.reddit.com/r/vscode/"><img src="/assets/icons/reddit-icon.svg" alt="Join the VS Code community on Reddit"></a>
+						</li>
+						<li>
+							<a href="https://www.vscodepodcast.com"><img src="/assets/icons/podcast-icon.svg" alt="The VS Code Insiders Podcast"></a>
+						</li>
+						<li>
+							<a href="https://www.tiktok.com/@vscode"><img src="/assets/icons/tiktok-icon.svg" alt="VS Code on TikTok"></a>
+						</li>
+						<li>
+							<a href="https://www.youtube.com/@code"><img src="/assets/icons/youtube-icon.svg" alt="VS Code on YouTube"></a>
+						</li>
+						<script>
+							function manageConsent() {
+								if (siteConsent && siteConsent.isConsentRequired) {
+									siteConsent.manageConsent();
+								}
+							}
+						</script>
+					</ul>
+					<a id="footer-microsoft-link" class="microsoft-logo" href="https://www.microsoft.com">
+						<img src="/assets/icons/microsoft.svg" alt="Microsoft homepage" />
+					</a>
+				</div>
+			</div>
+			<div class="footer-row">
+				<ul class="links">
+					<li><a id="footer-support-link" href="https://support.serviceshub.microsoft.com/supportforbusiness/create?sapId=d66407ed-3967-b000-4cfb-2c318cad363d"
+						target="_blank" rel="noopener" title="Get support for VS Code"
+						aria-label="Get support for VS Code (opens in new tab)">Support</a></li>
+					<li><a id="footer-privacy-link" href="https://go.microsoft.com/fwlink/?LinkId=521839"
+						target="_blank" rel="noopener" title="View the Microsoft privacy statement"
+						aria-label="Microsoft privacy statement (opens in new tab)">Privacy</a></li>
+					<li style="display: none;"><a id="footer-cookie-link" style="cursor: pointer;" onclick="manageConsent()"
+						target="_blank" rel="noopener">Manage Cookies</a></li>
+					<li><a id="footer-terms-link" href="https://www.microsoft.com/legal/terms-of-use"
+						target="_blank" rel="noopener" title="View the Microsoft Terms of Use"
+						aria-label="Microsoft Terms of Use (opens in new tab)">Terms of Use</a></li>
+					<li><a id="footer-license-link" href="/License"
+						target="_blank" rel="noopener" title="View the Visual Studio Code license"
+						aria-label="Visual Studio Code license (opens in new tab)">License</a></li>
+				</ul>
+			</div>
+			<div class="footer-row">
+				<ul class="links">
+					<li>
+						<svg class="privacy-choices" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 14" xml:space="preserve" height="16" width="43">
+							<title>Your Privacy Choices Opt-Out Icon</title>
+							<path d="M7.4 12.8h6.8l3.1-11.6H7.4C4.2 1.2 1.6 3.8 1.6 7s2.6 5.8 5.8 5.8z" style="fill-rule:evenodd;clip-rule:evenodd;fill:#fff"></path>
+							<path d="M22.6 0H7.4c-3.9 0-7 3.1-7 7s3.1 7 7 7h15.2c3.9 0 7-3.1 7-7s-3.2-7-7-7zm-21 7c0-3.2 2.6-5.8 5.8-5.8h9.9l-3.1 11.6H7.4c-3.2 0-5.8-2.6-5.8-5.8z" style="fill-rule:evenodd;clip-rule:evenodd;fill:#06f"></path>
+							<path d="M24.6 4c.2.2.2.6 0 .8L22.5 7l2.2 2.2c.2.2.2.6 0 .8-.2.2-.6.2-.8 0l-2.2-2.2-2.2 2.2c-.2.2-.6.2-.8 0-.2-.2-.2-.6 0-.8L20.8 7l-2.2-2.2c-.2-.2-.2-.6 0-.8.2-.2.6-.2.8 0l2.2 2.2L23.8 4c.2-.2.6-.2.8 0z" style="fill:#fff"></path>
+							<path d="M12.7 4.1c.2.2.3.6.1.8L8.6 9.8c-.1.1-.2.2-.3.2-.2.1-.5.1-.7-.1L5.4 7.7c-.2-.2-.2-.6 0-.8.2-.2.6-.2.8 0L8 8.6l3.8-4.5c.2-.2.6-.2.9 0z" style="fill:#06f"></path>
+						</svg>
+						<a id="footer-privacy-choices-link" href="https://aka.ms/YourCaliforniaPrivacyChoices"
+						target="_blank" rel="noopener" title="View Your Privacy Choices"
+						aria-label="Your Privacy Choices (opens in new tab)">Your Privacy Choices</a></li>
+					<li><a id="footer-consumer-health-privacy-link" href="https://go.microsoft.com/fwlink/?linkid=2259814"
+						target="_blank" rel="noopener" title="View the Microsoft Consumer Health Privacy policy"
+						aria-label="Microsoft Consumer Health Privacy policy (opens in new tab)">Consumer Health Privacy</a></li>
+				</ul>
+			</div>
+		</div>
+	</footer>
+	<script type="module">
+		document.addEventListener('DOMContentLoaded', () => {
+			const copilotDeepLinks = document.querySelectorAll('.copilot-deep-link');
+			if (copilotDeepLinks.length === 0) {
+				return;
+			}
+			if (window.innerWidth < 992) {
+				for (const link of copilotDeepLinks) {
+					link.href = 'https://aka.ms/vscode-activatecopilotfree';
+				}
+			}
+		});
+	</script>
+
+	<script src="/dist/index.js"></script>
+
+	
+
+	<script type="application/ld+json">
+		{
+			"@context" : "http://schema.org",
+			"@type" : "SoftwareApplication",
+			"name" : "Visual Studio Code",
+			"softwareVersion": "1.137",
+			"offers": {
+				"@type": "Offer",
+				"price": "0",
+				"priceCurrency": "USD"
+			},
+			"applicationCategory": "DeveloperApplication",
+			"applicationSubCategory": "AI Code Editor",
+			"description": "Visual Studio Code is a free, open source AI code editor for agent-first development. Build with AI agents, manage multi-agent workflows, and code across any environment.",
+			"alternateName": "VS Code",
+			"datePublished": "2021-11-03",
+			"operatingSystem": "Mac, Linux, Windows",
+			"logo": "https://code.visualstudio.com/assets/apple-touch-icon.png",
+			"screenshot": "https://code.visualstudio.com/assets/images/product-screenshot.png",
+			"releaseNotes": "https://code.visualstudio.com/updates",
+			"downloadUrl": "https://code.visualstudio.com/download",
+			"license": "https://code.visualstudio.com/license",
+			"softwareRequirements": "https://code.visualstudio.com/docs/supporting/requirements",
+			"url" : "https://code.visualstudio.com",
+			"author": {
+				"@type": "Organization",
+				"name": "Microsoft"
+			},
+			"publisher": {
+				"@type": "Organization",
+				"name": "Microsoft"
+			},
+			"maintainer": {
+				"@type": "Organization",
+				"name": "Microsoft"
+			},
+			"potentialAction": {
+				"@type": "SearchAction",
+				"target": "https://code.visualstudio.com/Search?q={search_term_string}",
+				"query-input": "required name=search_term_string"
+			},
+			"sameAs" : [
+				"https://en.wikipedia.org/wiki/Visual_Studio_Code",
+				"https://twitter.com/code",
+				"https://www.youtube.com/code",
+				"https://www.tiktok.com/@vscode",
+				"https://github.com/microsoft/vscode"
+			]
+		}
+	</script>
+</body>
+
+</html>

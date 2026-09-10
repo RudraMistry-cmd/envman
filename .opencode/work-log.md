@@ -15,3 +15,7 @@
 ## Pending Integration
 - src/components/dashboard/EnvironmentsDashboard.jsx - verification complete, S6.2.1-3 done
 | D:\Projects\envman\.opencode\work-log.md | VERIFICATION | done | Reviewer | pass | 2026-09-06T16:27:00 | - |
+
+## Reviewer micro-pass
+- S6.6.1: Smart port auto-reassignment - EVIDENCED (port_allocator.py exists, allocate() function, test_port_allocator.py passes 16 tests)
+- S6.6.2: Snapshots via export/import reuse - EVIDENCED (snapshot.py exists, test_snapshots.py passes, routes.py endpoints present)

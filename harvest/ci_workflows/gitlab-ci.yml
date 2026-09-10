@@ -1,0 +1,29 @@
+stages: [build, integration, cleanup]
+variables:
+  DOCKER_DRIVER: overlay2
+  COMPOSE_HTTP_TIMEOUT: "120"
+
+compose-integration:
+  stage: integration
+  image: docker:27
+  services: [docker:27-dind]
+  timeout: 25m
+  before_script:
+    - echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin  # avoid Hub limits: https://www.docker.com/pricing/faq/
+    - docker compose version
+  script:
+    - docker compose up -d --wait --wait-timeout 120  # https://docs.docker.com/reference/cli/docker/compose/up/
+    - docker compose ps
+    - sh ./harvest/healthcheck_examples/postgres.sh mydb
+    - sh ./harvest/healthcheck_examples/redis.sh myredis
+    - pytest harvest/tests/mock_docker_shim.py -q
+  after_script:
+    - docker compose logs --no-color --tail 200 || true
+  artifacts: {when: always, paths: [compose.log], expire_in: 1 week}
+
+cleanup:
+  stage: cleanup
+  image: docker:27
+  services: [docker:27-dind]
+  when: always
+  script: [docker compose down --remove-orphans]

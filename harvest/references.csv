@@ -1,0 +1,8 @@
+name,url,why_relevant,quote_or_note
+"K8s Controllers (reconcile pattern)",https://kubernetes.io/docs/concepts/architecture/controller/,"control loops watch state then make changes; spec=desired state","controllers are control loops ... move current closer to desired"
+"docker compose up (recreate/orphans/wait)",https://docs.docker.com/reference/cli/docker/compose/up/,"idempotent apply semantics EnvMan mirrors","(re)creates starts attaches; --remove-orphans --force-recreate --wait"
+"Docker Engine API + version negotiation",https://docs.docker.com/engine/api/,"client/daemon skew handling in reconciler preflight","API is backward-compatible ... DOCKER_API_VERSION disables negotiation"
+"docker exec (observed-state probing)",https://docs.docker.com/reference/cli/docker/container/exec/,"exec only valid on running containers","runs a new command in a running container"
+"Compose startup order (health gating)",https://docs.docker.com/compose/how-tos/startup-order/,"re-verify step after converge","does not wait until ready only until running; use service_healthy"
+"DevPod providers (local/remote/cloud reconcile)",https://devpod.sh/docs/what-is-devpod,"same workspace spec across backends","reuses DevContainer standard ... providers local remote cloud"
+"Colima (VM lifecycle reconcile)",https://github.com/abiosoft/colima,"minimal VM reconcile loop analogue","container runtimes on macOS with minimal setup"

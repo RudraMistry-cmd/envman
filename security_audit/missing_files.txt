@@ -1,0 +1,12 @@
+# Missing local files — run envman-executor-audit-20260910-1555
+The template required these paths; those marked MISSING were substituted as noted. Audit proceeded (no abort) because equivalents exist.
+
+- ./TECHNICAL_SPEC.md — FOUND (3644 lines; Part 1 read).
+- ./README(20260910-082209).md — MISSING (no such file in workspace). SUBSTITUTE: ./README.md (143 lines, read).
+- ./backend/app/executor.py — MOVED. FOUND at ./backend/app/engine/executor.py (360 lines, fully read).
+- ./backend/app/verifier.py — MOVED. FOUND at ./backend/app/engine/verifier.py (lines 1-330 read; remainder: connection builders + verify_environment, out of audit scope).
+- ./backend (all python under backend/app/, esp. registry/services.py) — FOUND; services.py inspected via grep (richness fields + 14 services).
+- ./recommended_patches.diff — MISSING at repo root. NOTE: harvest/recommended_patches.diff exists (prior art, superseded by this run's root recommended_patches.diff).
+- ./tests/mock_docker_shim.py — MISSING (only harvest/tests/mock_docker_shim.py). CREATED by this run at ./tests/mock_docker_shim.py.
+- ./claude_input_bundle.zip or /mnt/data/claude_input_bundle.zip — MISSING (neither path exists). No bundle inputs used; web + workspace sources only.
+- ./backend/requirements-dev.txt — MISSING (only backend/requirements.txt: fastapi/uvicorn/websockets/pydantic). Testing notes reference it per template with fallback documented in audit_report.md.

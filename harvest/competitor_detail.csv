@@ -1,0 +1,11 @@
+name,feature_set,pricing,unique_strength,complaints_url
+"VS Code Dev Containers",https://code.visualstudio.com/docs/devcontainers/containers,"devcontainer.json; Features; templates; attach; per-language quickstarts","Free OSS extension","Standard but slow first build; needs Docker + VS Code","https://code.visualstudio.com/docs/devcontainers/containers"
+"GitHub Codespaces","prebuilds; machine types; web VS Code; org billing; private registry","Metered compute+storage per-hr","Zero-install; scales to org","Cold/bill shock; offline impossible","https://docs.github.com/en/codespaces"
+"DevPod","devcontainer.json anywhere; providers; prebuilds; auto-shutdown; SSH/IDE","OSS free + BYO cloud (5-10x cheaper claim)","No lock-in; local+cloud same spec","Provider setup friction","https://devpod.sh/docs/what-is-devpod"
+"OrbStack","2s start; VirtioFS; Rosetta; K8s; native Swift <0.1% CPU; menu bar","Paid per-seat after trial","Speed + battery on Mac","Mac-only; closed source","https://docs.orbstack.dev/"
+"Colima","Docker/Containerd/Incus; Apple Silicon + Rosetta; k8s opt; CLI","MIT free","Minimal CLI; GPU/AI krunkit path","No GUI; Lima quirks","https://github.com/abiosoft/colima"
+"DDEV","PHP/Node recipes; provider-agnostic; WSL2 mirrored guidance","Apache-2.0 free","Minutes to web env; per-OS tables","Web-only scope","https://ddev.readthedocs.io/en/stable/"
+"Podman Desktop","Daemonless rootless; pods; K8s; Docker-compat","Apache-2.0 free","No daemon root; SELinux","Compose/socket gaps","https://podman.io/docs"
+"Docker Desktop","GUI; K8s; Compose; VMM/WSL2; Hub/Scout/Build Cloud","Free <250emp+<$10M else Pro/Team/Business","One-click + ecosystem","Heavy Mac; license paywall","https://docs.docker.com/desktop/"
+"Replit (cloud IDE)","Browser IDE; multiplayer; deploy","Freemium metered","Instant share/run","Lock-in; sleeps; price","https://docs.github.com/en/codespaces"
+"Devbox (Jetify)","Nix dev envs; shell + services","OSS free + Cloud","Reproducible without Docker","Nix learning curve","https://devpod.sh/docs/what-is-devpod"

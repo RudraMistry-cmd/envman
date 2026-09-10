@@ -1,0 +1,175 @@
+# Getting Started with Podman | Podman
+
+> Source: https://podman.io/docs
+> Cached: 2026-09-10T08:35:16.516Z
+
+---
+
+- [](/)
+- Getting Started
+
+On this page# Getting Started with Podman
+
+Podman is a utility provided as part of the libpod library. It can be used to
+create and maintain containers. The following tutorial will teach you how to set
+up Podman and perform some basic commands.## Podman Documentation[​](#podman-documentation)
+
+The documentation for Podman is located
+[here](https://docs.podman.io).## Installing Podman[​](#installing-podman)
+
+For installing or building Podman, please see the
+[installation instructions](/docs/installation).## Familiarizing yourself with Podman[​](#familiarizing-yourself-with-podman)
+
+The code samples are intended to be run as a non-root user, and use
+`sudo` where root escalation is required.### Getting help[​](#getting-help)
+
+To get some help and find out how Podman is working, you can use the *help*:
+
+`podman --help
+podman <subcommand> --help
+`For more details, you can review the manpages:
+
+```
+man podman
+man podman-<subcommand>
+
+```
+
+Please also reference the [Podman Troubleshooting Guide](https://github.com/containers/podman/blob/main/troubleshooting.md)
+to find known issues and tips on how to solve common configuration mistakes.### Searching, pulling & listing images[​](#searching-pulling--listing-images)
+
+Podman can search for images on remote registries with some simple keywords.
+
+`podman search <search_term>
+`You can also enhance your search with filters:
+
+`podman search httpd --filter=is-official
+`Downloading (Pulling) an image is easy, too.
+
+`podman pull docker.io/library/httpd
+`After pulling some images, you can list all images, present on your machine.
+
+`podman images
+`**Note**: Podman searches in different registries. To make sure you&#x27;re pulling the correct image, use the full image name (*docker.io/library/httpd* instead of *httpd*).
+
+### Running a container[​](#running-a-container)
+
+This sample container will run a very basic httpd server that serves only its
+index page.```
+podman run -d -p 8080:80/tcp docker.io/library/httpd
+
+```
+
+**Note**: Because the container is being run in detached mode, represented by
+the `-d` in the `podman run` command, Podman will print the container ID after
+it has executed the command.**Note**: We use port forwarding to be able to access the HTTP server. You need `slirp4netns` `v0.3.0` or newer to use it.
+
+### Listing running containers[​](#listing-running-containers)
+
+The `podman ps` command is used to list created and running containers.
+
+`podman ps
+`**Note**: To show all containers (created, exited, running, etc.), use the `-a` option with the `podman ps` command.
+
+### Testing the httpd container[​](#testing-the-httpd-container)
+
+As you are able to see, the container does not have an IP Address assigned. The
+container is reachable via it&#x27;s published port on your local machine.```
+curl http://localhost:8080
+
+```
+
+From another machine, you need to use the IP Address of the host, running the
+container.```
+curl http://<IP_Address>:8080
+
+```
+
+**Note**: Instead of using `curl`, you can also point a browser to
+`http://localhost:8080`.### Inspecting a running container[​](#inspecting-a-running-container)
+
+You can "inspect" a running container for metadata and details about itself.
+`podman inspect` will provide lots of useful information like environment
+variables, network settings or allocated resources.Since, the container is running in **rootless** mode, no IP Address is assigned
+to the container.```
+podman inspect -l | grep IPAddress
+            "IPAddress": "",
+
+```
+
+**Note**: The `-l` is a convenience argument for **latest container**. Instead of this short argument, you can
+also use the container&#x27;s ID, container&#x27;s name or the long argument (`--latest`).**Note**: If you are running remote Podman client, including Mac and Windows
+(excluding WSL2) machines, the `-l` option is not available.### Viewing the container&#x27;s logs[​](#viewing-the-containers-logs)
+
+You can also use Podman to view the container&#x27;s logs:
+
+```
+podman logs -l
+
+127.0.0.1 - - [04/May/2020:08:33:48 +0000] "GET / HTTP/1.1" 200 45
+127.0.0.1 - - [04/May/2020:08:33:50 +0000] "GET / HTTP/1.1" 200 45
+127.0.0.1 - - [04/May/2020:08:33:51 +0000] "GET / HTTP/1.1" 200 45
+127.0.0.1 - - [04/May/2020:08:33:51 +0000] "GET / HTTP/1.1" 200 45
+127.0.0.1 - - [04/May/2020:08:33:52 +0000] "GET / HTTP/1.1" 200 45
+127.0.0.1 - - [04/May/2020:08:33:52 +0000] "GET / HTTP/1.1" 200 45
+
+```
+
+### Viewing the container&#x27;s pids[​](#viewing-the-containers-pids)
+
+You can observe the httpd pid in the container with `podman top`.
+
+```
+podman top -l
+
+USER     PID   PPID   %CPU    ELAPSED            TTY     TIME   COMMAND
+root     1     0      0.000   22m13.33281018s    pts/0   0s     httpd -DFOREGROUND
+daemon   3     1      0.000   22m13.333132179s   pts/0   0s     httpd -DFOREGROUND
+daemon   4     1      0.000   22m13.333276305s   pts/0   0s     httpd -DFOREGROUND
+daemon   5     1      0.000   22m13.333818476s   pts/0   0s     httpd -DFOREGROUND
+
+```
+
+### Stopping the container[​](#stopping-the-container)
+
+You may stop the container:
+
+```
+podman stop -l
+
+```
+
+You can check the status of one or more containers using the `podman ps`
+command. In this case, you should use the `-a` argument to list all containers.```
+podman ps -a
+
+```
+
+### Removing the container[​](#removing-the-container)
+
+Finally, you can remove the container:
+
+`podman rm -l
+`You can verify the deletion of the container by running `podman ps -a`.
+
+## Network[​](#network)
+
+For a more detailed guide about Networking and DNS in containers, please see the
+[network guide](https://github.com/containers/podman/blob/main/docs/tutorials/basic_networking.md).## Checkpoint, Migration and Restoring containers[​](#checkpoint-migration-and-restoring-containers)
+
+Checkpointing a container stops the container while writing the state of all
+processes in the container to disk. With this, a container can later be
+migrated and restored, running at exactly the same point in time as the
+checkpoint. For more details, see the
+[checkpoint instructions](/docs/checkpoint).## Integration Tests[​](#integration-tests)
+
+For more information on how to setup and run the integration tests in your
+environment, checkout the Integration Tests
+[README.md](https://github.com/containers/podman/blob/main/test/README.md).## Podman Python Documentation[​](#podman-python-documentation)
+
+The documentation for the Podman Python SDK is located
+[here](https://podman-py.readthedocs.io/en/latest/index.html).## More information[​](#more-information)
+
+For more information on Podman and its subcommands, checkout the asciiart demos
+on the [README.md](https://github.com/containers/podman/blob/main/commands-demo.md)
+page.[Edit this page](https://github.com/containers/podman.io/tree/main/docs/index.md)
