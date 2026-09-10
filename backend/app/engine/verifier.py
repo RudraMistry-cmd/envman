@@ -86,7 +86,7 @@ async def _pg_is_ready(name: str) -> bool:
     """
     for attempt in range(1, PG_RETRY_COUNT + 1):
         result = await run_command(
-            ["docker", "exec", name, "pg_isready", "-U", "postgres"]
+            ["docker", "exec", name, "pg_isready", "-U", "postgres"], timeout=15
         )
         if result["code"] == 0:
             logger.info("postgres ready (attempt %d/%d)", attempt, PG_RETRY_COUNT)
@@ -116,7 +116,7 @@ async def _pg_run_query(name: str) -> Dict[str, Any]:
         result = await run_command([
             "docker", "exec", "-e", "PGPASSWORD=postgres", name,
             "psql", "-U", "postgres", "-c", "SELECT 1 AS connected;"
-        ])
+        ], timeout=30)
         last_result = result
         if result["code"] == 0:
             return {
