@@ -1,0 +1,21 @@
+--- a/envman/executor.py
++++ b/envman/executor.py
+@@ -1,12 +1,22 @@
+-import subprocess
+-def run_exec(container: str, cmd: str):
+-    # VULN: shell=True + string concat
+-    return subprocess.run(f"docker exec {container} {cmd}", shell=True)
++# Source: https://docs.docker.com/engine/security/
++# Quote: "only trusted users should control your Docker daemon"
++# Fix: argv list, no shell, name validation, timeouts.
++import re, subprocess
++_NAME = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_.-]+$")
++def run_exec(container: str, argv: list[str], timeout: int = 15):
++    assert _NAME.match(container), "bad container name"
++    assert all(isinstance(a, str) for a in argv)
++    # Explicit executable; shell features need sh -c wrapper (docs.docker.com/.../exec)
++    return subprocess.run(
++        ["docker", "exec", "-i", container, *argv],
++        capture_output=True, text=True, timeout=timeout, shell=False,
++    )
++# Example: run_exec("mydb", ["sh","-c","pg_isready -U \"$POSTGRES_USER\""])

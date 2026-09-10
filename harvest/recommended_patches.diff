@@ -1,0 +1,73 @@
+--- a/backend/app/engine/executor.py
++++ b/backend/app/engine/executor.py
+@@ -1,30 +1,90 @@
+-import subprocess
+-def run(cmd: str):
+-    return subprocess.run(cmd, shell=True)  # VULN R1/R2
++# P1+R2: list-based runner, no shell, Windows-safe (no shlex reliance).
++# Sources: https://docs.python.org/3/library/subprocess.html ("sequence preferred ... escaping")
++#          https://docs.python.org/3/library/shlex.html ("only designed for Unix shells")
++import os, re, shutil, subprocess
++_NAME = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_.-]+$")
++_DOCKER = shutil.which("docker") or "docker"
++
++def run_docker(argv: list[str], timeout: int = 30, extra_env: dict | None = None):
++    assert isinstance(argv, list) and all(isinstance(a, str) for a in argv), "argv must be list[str]"
++    merged = {**os.environ, **(extra_env or {})}  # R4: never wipe PATH
++    return subprocess.run(
++        [_DOCKER, *argv],
++        capture_output=True, text=True, timeout=timeout,
++        shell=False, env=merged,
++    )
++
++def checked_name(name: str) -> str:
++    assert _NAME.match(name or ""), f"bad docker name: {name!r}"
++    return name
+--- a/backend/app/engine/verifier.py
++++ b/backend/app/engine/verifier.py
+@@ -1,10 +1,15 @@
+-def probe(container, cmd):
+-    import subprocess
+-    return subprocess.run(f"docker exec {container} {cmd}", shell=True)
++# P2: explicit executable + sh -c INSIDE container only (R3).
++# Source: https://docs.docker.com/reference/cli/docker/container/exec/ ("command must be executable")
++def probe(container: str, inner: str, timeout: int = 15):
++    from .executor import run_docker, checked_name
++    checked_name(container)
++    # host argv list; shell features confined to container-side sh:
++    return run_docker(["exec", "-i", container, "sh", "-c", inner], timeout=timeout)
++# e.g. probe("mydb", 'pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"')
+--- a/backend/app/engine/preflight.py
++++ b/backend/app/engine/preflight.py
+@@ -0,0 +1,40 @@
++# P3+P4: PATH/permission/API preflight (R4).
++# Sources: https://docs.docker.com/engine/security/ ("only trusted users should control daemon")
++#          https://docs.docker.com/engine/api/ (version negotiation; DOCKER_API_VERSION)
++#          https://docs.docker.com/desktop/setup/install/windows-install/ (docker-users/WSL2)
++import shutil, subprocess
++def preflight(timeout=10):
++    from .executor import run_docker
++    assert shutil.which("docker"), "docker not on PATH (Windows: restart after install; WSL: enable integration)"
++    v = run_docker(["version", "--format", "{{.Server.APIVersion}}/{{.Client.APIVersion}}"], timeout=timeout)
++    if v.returncode != 0:
++        raise RuntimeError(f"docker daemon unreachable (socket perms? docker-users? DOCKER_HOST={__import__('os').environ.get('DOCKER_HOST')}): {v.stderr[:300]}")
++    return v.stdout.strip()
++# Refuse insecure TCP without TLS: only allow unix:/// / ssh:// / npipe:// or TLS-verified tcp://
+--- a/backend/app/engine/mounts.py
++++ b/backend/app/engine/mounts.py
+@@ -0,0 +1,30 @@
++# P5: WSL/Windows path normalization (R5).
++# Sources: https://docs.docker.com/engine/storage/bind-mounts/ ("strongly tied to host")
++#          https://docs.docker.com/desktop/features/wsl/ ; https://learn.microsoft.com/en-us/windows/wsl/networking
++import os, subprocess, pathlib
++def normalize_host_path(p: str) -> str:
++    # WSL interop: translate drive-letter via wslpath when available
++    import shutil
++    if len(p) > 2 and p[1] == ":" and shutil.which("wslpath"):
++        out = subprocess.run(["wslpath", "-a", p], capture_output=True, text=True, timeout=10, shell=False)
++        if out.returncode == 0:
++            return out.stdout.strip()
++    # cmd.exe backslash -> POSIX; resolve relative against CWD
++    return str(pathlib.Path(p).expanduser().resolve()).replace("\\", "/")
++# Use: ["run","--rm","--mount", f"type=bind,src={normalize_host_path(h)},dst={c},readonly", img]
++# Prefer --env-file over long -e chains (CreateProcess/cmd.exe length caps).

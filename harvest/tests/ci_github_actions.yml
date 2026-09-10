@@ -1,0 +1,18 @@
+# CI example: GitHub Actions with Docker + Compose health-gating
+# Source: https://github.com/docker/compose + https://docs.docker.com/reference/cli/docker/compose/up/
+name: envman-ci
+on: [push, pull_request]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compose up with health wait
+        run: |
+          docker compose -f harvest/code_patches/01_pg_isready_healthcheck.sh --help || true
+          docker compose up -d --wait --wait-timeout 120
+          docker ps --format '{{.Names}} {{.Status}}'
+      - name: Run mocked unit tests (no daemon needed)
+        run: |
+          pip install pytest
+          pytest harvest/tests/mock_docker_shim.py -v

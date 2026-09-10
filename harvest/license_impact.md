@@ -1,0 +1,7 @@
+# License Impact: Docker Desktop + Vendors (summary; cites only)
+- **Desktop threshold (binding)**: "Commercial use in larger enterprises (more than 250 employees OR more than $10M revenue) requires paid subscription" — https://docs.docker.com/desktop/setup/install/windows-install/ ; FAQ: "restricted to <250 employees and <$10M ... Government Entities shall not use without purchasing" — https://www.docker.com/pricing/faq/
+- **Plan deltas (Dec 2024+)**: Pro ~$9/mo, Team ~$15/u/mo, Business + consumption (Build Cloud/Scout/Testcontainers minutes); Personal 100 pulls/hr/user, unauth 10/hr/IP; service-account/IP-allowlist phased out — https://www.docker.com/pricing/faq/
+- **Engine OSS unaffected**: "open-source software such as Docker Engine is accessible for all" (Moby) — https://www.docker.com/pricing/faq/
+- **Images carry own licenses**: postgres/mysql/redis/elastic terms per-image; pin + SBOM; DSOS rate relief — https://hub.docker.com/_/postgres + https://www.docker.com/pricing/faq/
+- **Alternatives**: Colima MIT (https://github.com/abiosoft/colima); Podman Apache-2.0 (https://podman.io/docs); DevPod Apache-2.0 (https://devpod.sh/docs/what-is-devpod); OrbStack proprietary per-seat (https://orbstack.dev/ terms); DDEV Apache-2.0 (https://ddev.readthedocs.io/en/stable/)
+- **EnvMan action**: backend picker + license gate + `admin-settings.json` org pin; default CE/WSL2 where compliant; log backend+license mode.

@@ -1,0 +1,13 @@
+case_id,service,scenario,probe,expected_before_ready,expected_when_ready,timeout_s,source_url
+TC-PG-01,postgres,slow start (initdb + WAL replay),pg_isready via docker exec,connection refused | starting up,accepting connections,30,https://docs.docker.com/compose/how-tos/startup-order/
+TC-PG-02,postgres,missing POSTGRES_PASSWORD,container exits init error,FATAL password authentication failed,healthy with password set,15,https://hub.docker.com/_/postgres
+TC-PG-03,postgres,paused container,docker exec,paused unpause before exec,healthy after unpause,10,https://docs.docker.com/reference/cli/docker/container/exec/
+TC-RD-01,redis,slow RDB load,redis-cli ping,LOADING Redis is loading,PONG,10,https://redis.io/docs/latest/develop/tools/cli/
+TC-RD-02,redis,requirepass set no AUTH,redis-cli ping without -a,NOAUTH Authentication required,PONG with REDISCLI_AUTH,10,https://redis.io/docs/latest/develop/tools/cli/
+TC-KF-01,kafka,KRaft election 30-60s,broker api versions,Broker may not be available,API versions listed,60,https://docs.docker.com/compose/how-tos/startup-order/
+TC-KF-02,kafka,wrong advertised listener,client connect refused,Connection to node -1 could not be established,connected,60,https://docs.docker.com/compose/how-tos/startup-order/
+TC-ES-01,elasticsearch,JVM bootstrap 60-90s,curl https://localhost:9200,curl (7) Failed to connect,200 + cluster_name,90,https://www.elastic.co/docs/deploy-manage/deploy/self-managed/install-elasticsearch-docker-basic
+TC-ES-02,elasticsearch,TLS/auth missing,curl without --cacert/-u,security_exception / cert error,200 with cert+password,30,https://www.elastic.co/docs/deploy-manage/deploy/self-managed/install-elasticsearch-docker-basic
+TC-NET-01,any,port already allocated,preflight bind check,address already in use,free port bound,5,https://docs.docker.com/desktop/features/wsl/
+TC-VOL-01,any,stale anonymous volume hides schema,compose up without -V,old data served,fresh after --renew-anon-volumes,20,https://docs.docker.com/reference/cli/docker/compose/up/
+TC-HOOK-01,any,pre_start hook fails,ps -a label hook=pre_start,hook container retained + logs,healthy after fix,20,https://docs.docker.com/reference/cli/docker/compose/up/

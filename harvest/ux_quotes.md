@@ -1,0 +1,10 @@
+# UX Quotes (copyable; product-site testimonials + doc value-props; Reddit/SO skipped per crawl_skip.log)
+- "I've deleted Docker Desktop from my machine. Because there's something 100x better called OrbStack" — https://orbstack.dev/ (Mark Shust testimonial)
+- "I just replaced native Docker for OrbStack on my Intel Mac and it is so much better" — https://orbstack.dev/ (Luis Dalmolin)
+- "It feels faster, but most importantly the update works ... drop-in replacement for the docker backend & JUST WORKS" — https://orbstack.dev/ (Hynek Schlawack)
+- "Starts in 2 seconds, optimized network and file system, fast x86 emulation" — https://docs.orbstack.dev/ (Why OrbStack)
+- "launching local web development environments in minutes" — https://ddev.readthedocs.io/en/stable/ (DDEV promise EnvMan should match)
+- "use a container as full-featured dev environment" — https://code.visualstudio.com/docs/devcontainers/containers (Dev Containers core promise)
+- "secure configurable dedicated development environment ... prebuilds help speed up creation" — https://docs.github.com/en/codespaces (Codespaces; prebuilds = EnvMan template cache analogue)
+- "usually around 5-10 times cheaper ... No vendor lock-in ... Client-only ... Open-Source" — https://devpod.sh/docs/what-is-devpod (DevPod price pressure)
+- Pain-point paraphrases (docs-backed, not fabricated users): slow Mac file sync → VirtioFS demand (https://orbstack.dev/); WSL2 Mirrored/VirtioProxy VPN breakage (https://ddev.readthedocs.io/en/stable/); Hub pull limits breaking first-run (https://www.docker.com/pricing/faq/); Desktop license audit fear (https://docs.docker.com/desktop/setup/install/windows-install/).
